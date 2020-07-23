@@ -678,6 +678,31 @@ begin
   exact eq.symm (hf hx) ▸ (submodule.zero_mem ⊥)
 end
 
+-- lemma map_injective_of_injective : injective (map f) :=
+-- begin
+--   intros J J' h,
+--   ext,
+--   split,
+--   {
+--     intro hx,
+--     have : f x ∈ map f J := mem_map_of_mem hx,
+--     rw h at this,
+--   }
+-- end
+
+-- -- I don't think this is true
+-- theorem comap_eq_top_or_is_maximal_of_injective (H : is_maximal K) :
+--   (comap f K) = ⊤ ∨ is_maximal (comap f K) :=
+-- begin
+--   refine classical.or_iff_not_imp_left.2 (λ ne_top, ⟨λ h, ne_top h, λ J hJ, _⟩),
+--   refine map_injective_of_injective f hf ((map_top f).symm ▸ (H.right (map f J) _)),
+--   refine lt_of_le_of_ne _ _,
+--   {
+--     intros k hk,
+--     sorry,
+--   }, sorry
+-- end
+
 end injective
 
 section bijective
