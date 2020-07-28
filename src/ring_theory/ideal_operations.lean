@@ -552,6 +552,10 @@ le_antisymm (λ r ⟨n, hfrnk⟩, ⟨n, show f (r ^ n) ∈ K,
   from (f.map_pow r n).symm ▸ hfrnk⟩)
 (λ r ⟨n, hfrnk⟩, ⟨n, f.map_pow r n ▸ hfrnk⟩)
 
+theorem comap.is_prime [H : is_prime K] : is_prime (comap f K) :=
+⟨comap_ne_top f H.left,
+  λ x y h, H.right (show f x * f y ∈ K, by rwa [mem_comap, ring_hom.map_mul] at h)⟩
+
 @[simp] lemma map_quotient_self :
   map (quotient.mk I) I = ⊥ :=
 eq_bot_iff.2 $ ideal.map_le_iff_le_comap.2 $ λ x hx,
@@ -663,6 +667,40 @@ begin
     { exact λ h, hJ.right (le_map_of_comap_le_of_surjective f hf (le_of_eq h.symm)) } }
 end
 
+theorem comap_is_maximal_of_surjective (H : is_maximal K) : is_maximal (comap f K) :=
+begin
+  split,
+  {
+    refine comap_ne_top _ H.left,
+  },
+  {
+    intros J hJ,
+    replace H := H.right (map f J) _,
+    {
+      replace H := congr_arg (comap f) H,
+      rw comap_top at H,
+      rw comap_map_of_surjective _ hf at H,
+      rw eq_top_iff at ⊢ H,
+      refine le_trans H (sup_le (le_of_eq rfl) _),
+      refine le_trans (comap_mono (bot_le)) (le_of_lt hJ),
+    },
+    {
+      refine lt_of_le_of_ne _ _,
+      {
+        refine le_map_of_comap_le_of_surjective _ hf (le_of_lt hJ),
+      },
+      {
+        intro h,
+        apply ne_of_lt hJ,
+        refine trans (congr_arg (comap f) h) _,
+        rw comap_map_of_surjective _ hf,
+        rw sup_eq_left,
+        refine le_trans (comap_mono bot_le) (le_of_lt hJ),
+      }
+    }
+  }
+end
+
 end surjective
 
 section injective
@@ -677,31 +715,6 @@ begin
   rw [mem_comap, submodule.mem_bot, ← ring_hom.map_zero f] at hx,
   exact eq.symm (hf hx) ▸ (submodule.zero_mem ⊥)
 end
-
--- lemma map_injective_of_injective : injective (map f) :=
--- begin
---   intros J J' h,
---   ext,
---   split,
---   {
---     intro hx,
---     have : f x ∈ map f J := mem_map_of_mem hx,
---     rw h at this,
---   }
--- end
-
--- -- I don't think this is true
--- theorem comap_eq_top_or_is_maximal_of_injective (H : is_maximal K) :
---   (comap f K) = ⊤ ∨ is_maximal (comap f K) :=
--- begin
---   refine classical.or_iff_not_imp_left.2 (λ ne_top, ⟨λ h, ne_top h, λ J hJ, _⟩),
---   refine map_injective_of_injective f hf ((map_top f).symm ▸ (H.right (map f J) _)),
---   refine lt_of_le_of_ne _ _,
---   {
---     intros k hk,
---     sorry,
---   }, sorry
--- end
 
 end injective
 
@@ -731,17 +744,6 @@ by refine classical.or_iff_not_imp_left.1
 calc I = comap f (map f I) : ((order_iso_of_bijective f hf).right_inv I).symm
    ... = comap f ⊤ : by rw h
    ... = ⊤ : by rw comap_top
-
-theorem comap.is_maximal (H : is_maximal K) : is_maximal (comap f K) :=
-begin
-  refine ⟨λ h, H.left _, λ J hJ, _⟩,
-  { have : map f (comap f K) = ⊤ := eq.trans (congr_arg (map f) h) (map_top _),
-    rwa ← (order_iso_of_bijective f hf).left_inv K },
-  { refine (order_iso_of_bijective f hf).symm.injective
-      (eq.trans (H.right (map f J) (lt_of_le_of_ne _ _)) (map_top f).symm),
-    { exact (comap_le_iff_le_map f hf).1 (le_of_lt hJ) },
-    { exact λ h, hJ.right ((map_le_iff_le_comap).1 (le_of_eq h.symm)) } }
-end
 
 end bijective
 
@@ -825,6 +827,12 @@ variables {R : Type*} {S : Type*} [comm_ring R] [comm_ring S]
 lemma map_eq_bot_iff_le_ker {I : ideal R} (f : R →+* S) : I.map f = ⊥ ↔ I ≤ f.ker :=
 by rw [ring_hom.ker, eq_bot_iff, map_le_iff_le_comap]
 
+@[simp] lemma mk_ker {I : ideal R} : (quotient.mk I).ker = I :=
+by ext; rw [ring_hom.ker, mem_comap, submodule.mem_bot, quotient.eq_zero_iff_mem]
+
+lemma ker_eq_comap_bot (f : R →+* S) : f.ker = comap f ⊥ :=
+by ext; rw [ring_hom.mem_ker, mem_comap, submodule.mem_bot]
+
 lemma ker_le_comap {K : ideal S} (f : R →+* S) : f.ker ≤ comap f K :=
 λ x hx, mem_comap.2 (((ring_hom.mem_ker f).1 hx).symm ▸ K.zero_mem)
 
@@ -852,6 +860,79 @@ begin
       exact sub_self y },
     have := J.add_mem this hx'.left,
     rwa [sub_add, sub_self, sub_zero] at this }
+end
+
+theorem map.is_prime_of_surjective {f : R →+* S} (hf : function.surjective f) {I : ideal R} (H : is_prime I) :
+  (ring_hom.ker f ≤ I) → is_prime (map f I) :=
+begin
+  intro hk,
+  refine ⟨_, λ x y, _⟩,
+  {
+    intro h,
+    apply H.left,
+    rw eq_top_iff,
+    replace h := congr_arg (comap f) h,
+    rw comap_map_of_surjective _ hf at h,
+    rw comap_top at h,
+    rw ← h,
+    refine sup_le (le_of_eq rfl) hk,
+  },
+  {
+    intro hxy,
+    cases hf x with a ha,
+    cases hf y with b hb,
+    rw [← ha, ← hb, ← ring_hom.map_mul] at hxy,
+    rw mem_map_iff_of_surjective _ hf at hxy,
+    rcases hxy with ⟨c, hc, hc'⟩,
+    rw [← sub_eq_zero, ← ring_hom.map_sub] at hc',
+    have : c - a * b ∈ f.ker := hc',
+    specialize hk this,
+    have : a * b ∈ I, {
+      let t := I.sub_mem hc hk,
+      rwa [← sub_add, sub_self, zero_add] at t,
+    },
+    cases H.right this,
+    { left,
+      rw ← ha,
+      exact mem_map_of_mem h },
+    { right,
+      rw ← hb,
+      exact mem_map_of_mem h }
+  }
+end
+
+theorem map_radical {f : R →+* S} (hf : function.surjective f) {I : ideal R} :
+  (ring_hom.ker f ≤ I) → map f (I.radical) = (map f I).radical :=
+begin
+  intro h,
+  rw [radical_eq_Inf, radical_eq_Inf],
+  refine trans (map_Inf hf (λ J hJ, le_trans h hJ.left)) (_),
+  refine le_antisymm _ _,
+  {
+    rw le_Inf_iff,
+    intros J hJ,
+    refine Inf_le _,
+    rw set.mem_image,
+    use comap f J,
+    split,
+    {
+      haveI : is_prime J := hJ.right,
+      refine ⟨le_trans le_comap_map (comap_mono hJ.left), comap.is_prime _ J⟩,
+    },
+    {
+      exact map_comap_of_surjective _ hf J,
+    }
+  },
+  {
+    rw le_Inf_iff,
+    intros j hj,
+    refine Inf_le _,
+    rw set.mem_image at hj,
+    cases hj with J hJ,
+    rw ← hJ.right,
+    refine ⟨map_mono hJ.left.left, map.is_prime_of_surjective hf hJ.left.right _⟩,
+    refine le_trans h hJ.left.left,
+  }
 end
 
 end ideal

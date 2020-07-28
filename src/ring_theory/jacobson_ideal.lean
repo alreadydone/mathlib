@@ -40,7 +40,7 @@ Jacobson, Jacobson radical, Local Ideal
 universes u v
 
 namespace ideal
-variables {R : Type u} [comm_ring R]
+variables {R S : Type u} [comm_ring R] [comm_ring S]
 
 section jacobson
 
@@ -50,6 +50,16 @@ Inf {J : ideal R | I ≤ J ∧ is_maximal J}
 
 lemma le_jacobson {I : ideal R} : I ≤ jacobson I :=
 λ x hx, mem_Inf.mpr (λ J hJ, hJ.left hx)
+
+lemma radical_le_jacobson {I : ideal R} : radical I ≤ jacobson I :=
+begin
+  refine le_Inf (λ J hJ, _),
+  rw (radical_eq_Inf I),
+  exact Inf_le ⟨hJ.left, is_maximal.is_prime hJ.right⟩,
+end
+
+lemma eq_radical_of_eq_jacobson {I : ideal R} : jacobson I = I → radical I = I :=
+λ h, le_antisymm (le_trans radical_le_jacobson (le_of_eq h)) le_radical
 
 @[simp] lemma jacobson_top : jacobson (⊤ : ideal R) = ⊤ :=
 eq_top_iff.2 le_jacobson
@@ -99,6 +109,74 @@ begin
   cases hM hI with is_max is_top,
   { refine hx ⟨le_Inf_iff.1 (le_of_eq hInf) I hI, is_max⟩ },
   { rw is_top, exact submodule.mem_top }
+end
+
+lemma eq_jacobson_iff_not_mem {I : ideal R} :
+  I.jacobson = I ↔ ∀ x ∉ I, ∃ M : ideal R, (M ∈ {J : ideal R | I ≤ J ∧ J.is_maximal}) ∧ x ∉ M :=
+begin
+  split,
+  {
+    intros h x hx,
+    rw ← h at hx,
+    erw mem_Inf at hx,
+    push_neg at hx,
+    exact hx,
+  },
+  {
+    intros h,
+    refine le_antisymm _ le_jacobson,
+    intros x hx,
+    contrapose hx,
+    erw mem_Inf,
+    push_neg,
+    exact h x hx,
+  }
+end
+
+theorem map_jacobson {f : R →+* S} (hf : function.surjective f) {I : ideal R} :
+  (ring_hom.ker f ≤ I) → map f (I.jacobson) = (map f I).jacobson :=
+begin
+  intro h,
+  rw [ideal.jacobson, ideal.jacobson],
+  refine trans (map_Inf hf (λ J hJ, le_trans h hJ.left)) (_),
+  refine le_antisymm _ _,
+  {
+    rw le_Inf_iff,
+    intros J hJ,
+    refine Inf_le _,
+    rw set.mem_image,
+    use comap f J,
+    split,
+    {
+      refine ⟨le_trans le_comap_map (comap_mono hJ.left), _⟩,
+      exact comap_is_maximal_of_surjective _ hf hJ.right,
+    },
+    {
+      exact map_comap_of_surjective _ hf J,
+    }
+  },
+  {
+    sorry,
+  }
+end
+
+theorem comap_jacobson {f : R →+* S} (hf : function.surjective f) {K : ideal S} :
+  comap f (K.jacobson) = (comap f K).jacobson := sorry
+
+-- TODO: reverse direction is much easier and more useful, maybe drop the rest
+lemma radical_eq_jacobson_iff_quotient {I : ideal R} :
+  I.radical = I.jacobson ↔ radical (⊥ : ideal (I.quotient)) = jacobson ⊥ :=
+begin
+  have hf : function.surjective (quotient.mk I) := submodule.quotient.mk_surjective I,
+  split,
+  { intro h,
+    have := congr_arg (map (quotient.mk I)) h,
+    rw [map_radical hf (le_of_eq mk_ker), map_jacobson hf (le_of_eq mk_ker)] at this,
+    simpa using this },
+  { intro h,
+    have := congr_arg (comap (quotient.mk I)) h,
+    rw [comap_radical, comap_jacobson hf, ← ker_eq_comap_bot (quotient.mk I)] at this,
+    simpa using this }
 end
 
 @[mono] lemma jacobson_mono {I J : ideal R} : I ≤ J → I.jacobson ≤ J.jacobson :=
