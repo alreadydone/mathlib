@@ -40,7 +40,8 @@ Jacobson, Jacobson radical, Local Ideal
 universes u v
 
 namespace ideal
-variables {R S : Type u} [comm_ring R] [comm_ring S]
+variables {R : Type u} [comm_ring R]
+variables {S : Type v} [comm_ring S]
 
 section jacobson
 
@@ -71,6 +72,9 @@ eq_top_iff.2 le_jacobson
 
 lemma jacobson_eq_bot {I : ideal R} : jacobson I = ⊥ → I = ⊥ :=
 λ h, eq_bot_iff.mpr (h ▸ le_jacobson)
+
+lemma is_maximal.jacobson {I : ideal R} [H : is_maximal I] : I.jacobson = I :=
+le_antisymm (Inf_le ⟨le_of_eq rfl, H⟩) le_jacobson
 
 lemma jacobson.is_maximal {I : ideal R} : is_maximal I → is_maximal (jacobson I) :=
 λ h, ⟨λ htop, h.left (jacobson_eq_top_iff.1 htop),

@@ -286,6 +286,23 @@ lemma mk'_eq_iff_eq {x₁ x₂} {y₁ y₂ : M} :
   f.mk' x₁ y₁ = f.mk' x₂ y₂ ↔ f.to_map (x₁ * y₂) = f.to_map (x₂ * y₁) :=
 f.to_localization_map.mk'_eq_iff_eq
 
+lemma mk'_mem_iff {x} {y : M} {I : ideal S} : f.to_map x ∈ I ↔ f.mk' x y ∈ I :=
+begin
+  split,
+  {
+    intro h,
+    rw ← mk'_spec f x y at h,
+    obtain ⟨b, hb⟩ := is_unit_iff_exists_inv.1 (map_units f y),
+    have := I.smul_mem b h,
+    rwa [smul_eq_mul, mul_comm, mul_assoc, hb, mul_one] at this,
+  },
+  {
+    intro h,
+    rw [← mk'_spec f x y, mul_comm],
+    exact I.smul_mem (f.to_map y) h,
+  }
+end
+
 protected lemma eq {a₁ b₁} {a₂ b₂ : M} :
   f.mk' a₁ a₂ = f.mk' b₁ b₂ ↔ ∃ c : M, a₁ * b₂ * c = b₁ * a₂ * c :=
 f.to_localization_map.eq
@@ -713,6 +730,9 @@ begin
     f.mk'_spec r s ▸ @ideal.mul_mem_right _ _ J (f.mk' r s) (f.to_map s) hJ)),
 end
 
+theorem comap_map_of_is_prime_disjoint (I : ideal R) [H : I.is_prime] (h : disjoint (M : set R) I) :
+  ideal.comap f.to_map (ideal.map f.to_map I) = I := sorry
+
 /-- If `S` is the localization of `R` at a submonoid, the ordering of ideals of `S` is
 embedded in the ordering of ideals of `R`. -/
 def le_order_embedding :
@@ -722,6 +742,32 @@ def le_order_embedding :
   inj'   := function.left_inverse.injective f.map_comap,
   ord'   := λ J₁ J₂, ⟨ideal.comap_mono, λ hJ,
     f.map_comap J₁ ▸ f.map_comap J₂ ▸ ideal.map_mono hJ⟩ }
+
+lemma is_prime_iff_is_prime_disjoint (J : ideal S) :
+  J.is_prime ↔ (ideal.comap f.to_map J).is_prime ∧ disjoint (M : set R) ↑(ideal.comap f.to_map J) :=
+begin
+  split,
+  { refine λ h, ⟨_, λ m hm, h.1 (ideal.eq_top_of_is_unit_mem _ hm.2 (map_units f ⟨m, hm.left⟩))⟩,
+    split,
+    { refine λ hJ, h.left _,
+      rw [eq_top_iff, (le_order_embedding f).ord],
+      exact le_of_eq hJ.symm },
+    { intros x y hxy,
+      rw [ideal.mem_comap, ring_hom.map_mul] at hxy,
+      exact h.right hxy } },
+  { intro h,
+    split,
+    { refine λ hJ, h.left.left (eq_top_iff.2 _),
+      rwa [eq_top_iff, (le_order_embedding f).ord] at hJ },
+    { intros x y hxy,
+      obtain ⟨a, s, ha⟩ := mk'_surjective f x,
+      obtain ⟨b, t, hb⟩ := mk'_surjective f y,
+      have : f.mk' (a * b) (s * t) ∈ J := by rwa [mk'_mul, ha, hb],
+      rw [← mk'_mem_iff, ← ideal.mem_comap] at this,
+      replace this := h.left.right this,
+      rw [ideal.mem_comap, ideal.mem_comap] at this,
+      rwa [← ha, ← hb, ← mk'_mem_iff, ← mk'_mem_iff] } }
+end
 
 end ideals
 
