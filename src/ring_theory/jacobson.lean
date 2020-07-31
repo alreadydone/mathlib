@@ -4,7 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Devon Tuma
 -/
 import data.mv_polynomial
-import data.polynomial.ring_division
 import ring_theory.ideal_operations
 import ring_theory.localization
 import ring_theory.jacobson_ideal
@@ -19,6 +18,10 @@ The following conditions are equivalent for a ring `R`:
 
 Any ring satisfying any of these equivalent conditions is said to be Jacobson.
 
+Some particular examples of Jacobson rings are also proven.
+`is_jacobson_quotient` says that the quotient of a jacobson ring is jacobson.
+`is_jacobson_localization` says the localization of a jacobson ring to a single element is jacobson.
+
 ## Main definitions
 
 Let `R` be a commutative ring. Jacobson Rings are defined using the first of the above conditions
@@ -31,6 +34,9 @@ Let `R` be a commutative ring. Jacobson Rings are defined using the first of the
 * `is_jacobson_iff_prime_eq` is the equivalence between conditions 1 and 3 above.
 
 * `is_jacobson_iff_Inf_maximal` is the equivalence between conditions 1 and 2 above.
+
+* `is_jacobson_of_surjective` says that if `R` is a jacobson ring and `f : R →+* S` surjective,
+then `S` is also a jacobson ring
 
 ## Tags
 
@@ -155,8 +161,7 @@ end
 abbreviation M (y : R) : submonoid R := (submonoid.closure {y} : submonoid R)
 
 lemma is_maximal_iff_is_maximal_disjoint [H : is_jacobson R] (J : ideal S) :
-  J.is_maximal ↔ (comap f.to_map J).is_maximal
-    ∧ disjoint (M y : set R) ↑(ideal.comap f.to_map J) :=
+  J.is_maximal ↔ (comap f.to_map J).is_maximal ∧ disjoint (M y : set R) ↑(ideal.comap f.to_map J) :=
 begin
   split,
   {
@@ -218,7 +223,8 @@ def le_order_iso_of_maximal [is_jacobson R] :
 { to_fun := λ p, ⟨ideal.comap f.to_map p.1, (is_maximal_iff_is_maximal_disjoint f p.1).1 p.2⟩,
   inv_fun := λ p, ⟨ideal.map f.to_map p.1, (is_maximal_of_is_maximal_disjoint f p.1) p.2⟩,
   left_inv := λ J, subtype.eq (map_comap f J),
-  right_inv := λ I, subtype.eq (comap_map_of_is_prime_disjoint f I.1 (is_maximal.is_prime I.2.1) I.2.2),
+  right_inv := λ I, subtype.eq (comap_map_of_is_prime_disjoint f
+    I.1 (is_maximal.is_prime I.2.1) I.2.2),
   ord' := λ I I', ⟨λ h x hx, h hx, λ h, (show I.val ≤ I'.val,
     from (map_comap f I.val) ▸ (map_comap f I'.val) ▸ (ideal.map_mono h))⟩ }
 
@@ -275,8 +281,7 @@ begin
   refine infi_le_infi_of_subset _,
   rintros I ⟨hI, hI'⟩,
   simp,
-  refine ⟨map f.to_map I, _⟩,
-  split,
+  refine ⟨map f.to_map I, ⟨_, _⟩⟩,
   { exact ⟨le_trans (le_of_eq ((localization_map.map_comap f P').symm)) (map_mono hI),
       is_maximal_of_is_maximal_disjoint f _ hI'⟩ },
   { exact localization_map.comap_map_of_is_prime_disjoint f I
