@@ -191,8 +191,7 @@ begin
     { rwa ← is_maximal_local_iff f }
   },
   {
-    haveI : is_prime I := is_maximal.is_prime hI'.left,
-    exact localization_map.comap_map_of_is_prime_disjoint f I hI'.right,
+    exact localization_map.comap_map_of_is_prime_disjoint f I (is_maximal.is_prime hI'.left) hI'.right,
   }
 end
 

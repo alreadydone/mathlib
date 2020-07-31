@@ -732,8 +732,7 @@ def to_map_ideal (I : ideal R) : ideal S :=
     use a'.2 * b'.2,
     simp,
     rw [add_mul, ← mul_assoc a, ha, mul_comm (f.to_map a'.2) (f.to_map b'.2), ← mul_assoc b, hb],
-    ring,
-  },
+    ring, },
   smul_mem' := by {
     intros c x hx,
     obtain ⟨x', hx⟩ := hx,
@@ -742,26 +741,22 @@ def to_map_ideal (I : ideal R) : ideal S :=
     use c'.2 * x'.2,
     simp,
     rw [← hx, ← hc],
-    ring,
-  } }
+    ring, }
+  }
 
 theorem map_to_map_eq_to_map_ideal {I : ideal R} : ideal.map f.to_map I = to_map_ideal f I :=
 begin
   refine le_antisymm _ _,
   {
-    refine Inf_le _,
-    simp,
-    intros x hx,
-    show f.to_map x ∈ (to_map_ideal f I).carrier,
-    sorry -- TODO: seems wrong
+    refine λ _ h, ideal.mem_Inf.1 h (λ x hx, _),
+    obtain ⟨y, hy⟩ := hx,
+    use ⟨⟨⟨y, hy.left⟩, 1⟩, by simp [hy.right]⟩,
   },
   {
     intros x hx,
     have : x ∈ (to_map_ideal f I).carrier := hx,
     obtain ⟨⟨a, s⟩, h⟩ := this,
-    suffices : x * (f.to_map s) ∈ ideal.map f.to_map I, {
-      rwa [mul_comm, ← ideal.mem_iff_mul_unit_mem _ (map_units f s)] at this,
-    },
+    rw [ideal.mem_iff_mul_unit_mem _ (map_units f s), mul_comm],
     exact h.symm ▸ ideal.mem_map_of_mem a.2,
   }
 end
