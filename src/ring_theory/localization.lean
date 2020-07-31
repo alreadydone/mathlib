@@ -838,6 +838,8 @@ lemma is_prime_of_is_prime_disjoint (I : ideal R) :
   I.is_prime ∧ disjoint (M : set R) ↑I → (ideal.map f.to_map I).is_prime :=
 λ h, by rwa [is_prime_iff_is_prime_disjoint f, comap_map_of_is_prime_disjoint f I h.1 h.2]
 
+/-- If `R` is a ring, then prime ideals in the localization at `M`
+correspond to prime ideals in the original ring `R` that are disjoint from `M` -/
 def le_order_iso_of_prime (f : localization_map M S) :
   ((≤) : {p : ideal S // p.is_prime} → {p : ideal S // p.is_prime} → Prop) ≃o
   ((≤) : {p : ideal R // p.is_prime ∧ disjoint (M : set R) ↑p}

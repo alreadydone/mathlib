@@ -44,6 +44,8 @@ namespace ideal
 variables {R : Type u} [comm_ring R] {I : ideal R}
 variables {S : Type v} [comm_ring S]
 
+--local attribute [instance] classical.prop_decidable
+
 section is_jacobson
 
 /-- A ring is a Jacobson ring if for every radical ideal `I`,
@@ -114,24 +116,114 @@ end is_jacobson
 
 section localization
 open localization_map
-variables {M : submonoid R}
+variables {y : R} (f : localization_map (submonoid.closure {y} : submonoid R) S)
 
-local attribute [instance] classical.prop_decidable
-
-/-- If `S` is the localization of `R` at a submonoid, the maximal ideals of `S` are in
-bijection with maximla ideals of `R` that are disjoint from `M` -/
-lemma is_maximal_localization_iff_of_jacobson [is_jacobson R] (f : localization_map M S) (J : ideal S) :
-  J.is_maximal ↔ (comap f.to_map J).is_maximal ∧ disjoint (M : set R) ↑(ideal.comap f.to_map J) :=
+lemma not_mem_of_disjoint_closure_singleton {S : set R} :
+  disjoint ((submonoid.closure {y} : submonoid R) : set R) S → y ∉ S :=
 begin
-  sorry,
+  intro h,
+  {
+    intro h',
+    rw disjoint_iff at h,
+    rw eq_bot_iff at h,
+    have : y ∈ ⊥, {
+      refine h ⟨_, h'⟩,
+      erw submonoid.mem_closure_singleton,
+      use 1,
+      rw pow_one,
+    },
+    simpa using this,
+  },
 end
 
-lemma is_maximal_local_iff [is_jacobson R] (f : localization_map M S) (I : ideal R) :
-  I.is_maximal ∧ disjoint (M : set R) ↑I ↔ (map f.to_map I).is_maximal := sorry
+lemma disjoint_closure_singleton_iff_not_mem {I : ideal R} (hI : I.radical = I) :
+  disjoint ((submonoid.closure {y} : submonoid R) : set R) ↑I ↔ y ∉ I.1 :=
+begin
+  refine ⟨not_mem_of_disjoint_closure_singleton, λ h, _⟩,
+  rw disjoint_iff,
+  rw eq_bot_iff,
+  rintros x ⟨hx, hx'⟩,
+  exfalso,
+  apply h,
+  erw submonoid.mem_closure_singleton at hx,
+  cases hx with n hn,
+  rw ← hn at hx',
+  rw ← hI at hx' ⊢,
+  refine mem_radical_of_pow_mem hx',
+end
 
-/-- Localization to a set with a single generator is jacobson -/
-lemma is_jacobson_localization [H : is_jacobson R]
-  {y : R} (f : localization_map (submonoid.closure {y} : submonoid R) S) : is_jacobson S :=
+abbreviation M (y : R) : submonoid R := (submonoid.closure {y} : submonoid R)
+
+lemma is_maximal_iff_is_maximal_disjoint [H : is_jacobson R] (J : ideal S) :
+  J.is_maximal ↔ (comap f.to_map J).is_maximal
+    ∧ disjoint (M y : set R) ↑(ideal.comap f.to_map J) :=
+begin
+  split,
+  {
+    refine λ h, ⟨_, λ m hm, h.1 (ideal.eq_top_of_is_unit_mem _ hm.2 (map_units f ⟨m, hm.left⟩))⟩,
+    rw is_jacobson_iff_prime_eq at H,
+    have : J.is_prime := is_maximal.is_prime h,
+    rw is_prime_iff_is_prime_disjoint f at this,
+    specialize H (comap f.to_map J) this.left,
+    have := this.right,
+    replace this := not_mem_of_disjoint_closure_singleton this,
+    rw ← H at this,
+    simp at this,
+    erw mem_Inf at this,
+    push_neg at this,
+    rcases this with ⟨I, hI, hI'⟩,
+    suffices : comap f.to_map J = I, {
+      rw this,
+      exact hI.right
+    },
+    have : J ≤ map f.to_map I := (map_comap f J) ▸ (map_mono hI.left),
+    cases (classical.em (J = map f.to_map I)) with hJ hJ,
+    { rw hJ,
+      rw comap_map_of_is_prime_disjoint f I (is_maximal.is_prime hI.right),
+      rwa disjoint_closure_singleton_iff_not_mem (is_maximal.is_prime hI.right).radical},
+    { exfalso,
+      have hI_p : (map f.to_map I).is_prime, {
+        refine is_prime_of_is_prime_disjoint f I ⟨is_maximal.is_prime hI.right, _⟩,
+        rwa disjoint_closure_singleton_iff_not_mem (is_maximal.is_prime hI.right).radical,
+      },
+      refine hI_p.left (h.right _ (lt_of_le_of_ne this hJ)) }
+  },
+  {
+    intro h,
+    split,
+    { refine λ hJ, h.left.left (eq_top_iff.2 _),
+      rwa [eq_top_iff, (le_order_embedding f).ord] at hJ },
+    {
+      intros I hI,
+      have := congr_arg (map f.to_map) (h.left.right _ ⟨comap_mono (le_of_lt hI), _⟩),
+      rwa [map_comap f I, map_top f.to_map] at this,
+      refine λ hI', hI.right _,
+      rw [← map_comap f I, ← map_comap f J],
+      exact map_mono hI',
+    }
+  }
+end
+
+lemma is_maximal_of_is_maximal_disjoint [is_jacobson R] (I : ideal R) :
+  I.is_maximal ∧ disjoint (M y : set R) ↑I → (map f.to_map I).is_maximal :=
+λ h, by rwa [is_maximal_iff_is_maximal_disjoint f,
+  comap_map_of_is_prime_disjoint f I (is_maximal.is_prime h.1) h.2]
+
+/-- If `R` is a jacobson ring, then maximal ideals in the localization at `y`
+correspond to prime ideals in the original ring `R` that don't contain `y` -/
+def le_order_iso_of_maximal [is_jacobson R] :
+  ((≤) : {p : ideal S // p.is_maximal} → {p : ideal S // p.is_maximal} → Prop) ≃o
+  ((≤) : {p : ideal R // p.is_maximal ∧ disjoint (M y : set R) ↑p}
+            → {p : ideal R // p.is_maximal ∧ disjoint (M y : set R) ↑p} → Prop) :=
+{ to_fun := λ p, ⟨ideal.comap f.to_map p.1, (is_maximal_iff_is_maximal_disjoint f p.1).1 p.2⟩,
+  inv_fun := λ p, ⟨ideal.map f.to_map p.1, (is_maximal_of_is_maximal_disjoint f p.1) p.2⟩,
+  left_inv := λ J, subtype.eq (map_comap f J),
+  right_inv := λ I, subtype.eq (comap_map_of_is_prime_disjoint f I.1 (is_maximal.is_prime I.2.1) I.2.2),
+  ord' := λ I I', ⟨λ h x hx, h hx, λ h, (show I.val ≤ I'.val,
+    from (map_comap f I.val) ▸ (map_comap f I'.val) ▸ (ideal.map_mono h))⟩ }
+
+/-- If `y ∈ R` and `S` is the localization the submonoid generated by `y`, then `S` is jacobson -/
+lemma is_jacobson_localization [H : is_jacobson R] (f : localization_map (M y) S) : is_jacobson S :=
 begin
   let H' := H,
   rw is_jacobson_iff_prime_eq at H' ⊢,
@@ -185,42 +277,12 @@ begin
   simp,
   refine ⟨map f.to_map I, _⟩,
   split,
-  {
-    split,
-    { refine le_trans (le_of_eq ((localization_map.map_comap f P').symm)) (map_mono hI) },
-    { rwa ← is_maximal_local_iff f }
-  },
-  {
-    exact localization_map.comap_map_of_is_prime_disjoint f I (is_maximal.is_prime hI'.left) hI'.right,
-  }
+  { exact ⟨le_trans (le_of_eq ((localization_map.map_comap f P').symm)) (map_mono hI),
+      is_maximal_of_is_maximal_disjoint f _ hI'⟩ },
+  { exact localization_map.comap_map_of_is_prime_disjoint f I
+      (is_maximal.is_prime hI'.left) hI'.right }
 end
 
 end localization
-
-section polynomial
-open polynomial
-
-theorem is_jacobson_polynomial_iff_is_jacobson : is_jacobson R ↔ is_jacobson (polynomial R) :=
-begin
-  split; introI H,
-  {
-    rw is_jacobson_iff_prime_eq,
-    introsI I hI,
-    rw eq_jacobson_iff_quotient,
-    let R' := map ((quotient.mk I).comp C) (⊤ : ideal R),
-    sorry,
-  },
-  { exact is_jacobson_of_surjective ⟨eval₂_ring_hom (ring_hom.id _) 1, λ x, ⟨C x, by simp⟩⟩ }
-end
-
-lemma is_jacobson_mv_polynomial (H : is_jacobson R) (n : ℕ) :
-  is_jacobson (mv_polynomial (fin n) R) :=
-nat.rec_on n
-  ((is_jacobson_iso
-    ((mv_polynomial.ring_equiv_of_equiv R (equiv.equiv_pempty $ fin.elim0)).trans
-    (mv_polynomial.pempty_ring_equiv R))).mpr H)
-  (λ n hn, (is_jacobson_iso (mv_polynomial.fin_succ_equiv R n)).2 (is_jacobson_polynomial_iff_is_jacobson.1 hn))
-
-end polynomial
 
 end ideal
