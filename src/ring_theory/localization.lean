@@ -720,6 +720,52 @@ variables (f : localization_map M S)
 
 section ideals
 
+/-- Explicit definition of the ideal given by `ideal.map f.to_map I` -/
+def to_map_ideal (I : ideal R) : ideal S :=
+{carrier := { z : S | ∃ x : I × M, z * (f.to_map x.2) = f.to_map x.1},
+  zero_mem' := ⟨⟨0, 1⟩, by simp⟩,
+  add_mem' := by {
+    intros a b ha hb,
+    obtain ⟨b', hb⟩ := hb,
+    obtain ⟨a', ha⟩ := ha,
+    use ⟨a'.2 * b'.1 + b'.2 * a'.1, I.add_mem (I.smul_mem _ b'.1.2) (I.smul_mem _ a'.1.2)⟩,
+    use a'.2 * b'.2,
+    simp,
+    rw [add_mul, ← mul_assoc a, ha, mul_comm (f.to_map a'.2) (f.to_map b'.2), ← mul_assoc b, hb],
+    ring,
+  },
+  smul_mem' := by {
+    intros c x hx,
+    obtain ⟨x', hx⟩ := hx,
+    obtain ⟨c', hc⟩ := localization_map.surj f c,
+    use ⟨c'.1 * x'.1, I.smul_mem c'.1 x'.1.2⟩,
+    use c'.2 * x'.2,
+    simp,
+    rw [← hx, ← hc],
+    ring,
+  } }
+
+theorem map_to_map_eq_to_map_ideal {I : ideal R} : ideal.map f.to_map I = to_map_ideal f I :=
+begin
+  refine le_antisymm _ _,
+  {
+    refine Inf_le _,
+    simp,
+    intros x hx,
+    show f.to_map x ∈ (to_map_ideal f I).carrier,
+    sorry -- TODO: seems wrong
+  },
+  {
+    intros x hx,
+    have : x ∈ (to_map_ideal f I).carrier := hx,
+    obtain ⟨⟨a, s⟩, h⟩ := this,
+    suffices : x * (f.to_map s) ∈ ideal.map f.to_map I, {
+      rwa [mul_comm, ← ideal.mem_iff_mul_unit_mem _ (map_units f s)] at this,
+    },
+    exact h.symm ▸ ideal.mem_map_of_mem a.2,
+  }
+end
+
 theorem map_comap (J : ideal S) :
   ideal.map f.to_map (ideal.comap f.to_map J) = J :=
 le_antisymm (ideal.map_le_iff_le_comap.2 (le_refl _)) $ λ x hJ,
@@ -730,8 +776,31 @@ begin
     f.mk'_spec r s ▸ @ideal.mul_mem_right _ _ J (f.mk' r s) (f.to_map s) hJ)),
 end
 
-theorem comap_map_of_is_prime_disjoint (I : ideal R) [H : I.is_prime] (h : disjoint (M : set R) I) :
-  ideal.comap f.to_map (ideal.map f.to_map I) = I := sorry
+theorem comap_map_of_is_prime_disjoint (I : ideal R) (hI : I.is_prime) (hM : disjoint (M : set R) I) :
+  ideal.comap f.to_map (ideal.map f.to_map I) = I :=
+begin
+  refine le_antisymm _ ideal.le_comap_map,
+  intros a ha,
+  rw ideal.mem_comap at ha,
+  rw map_to_map_eq_to_map_ideal at ha,
+  obtain ⟨⟨b, s⟩, h⟩ := ha,
+  have : f.to_map (a * ↑s - b) = 0 := by simpa [sub_eq_zero] using h,
+  rw ← f.to_map.map_zero at this,
+  rw eq_iff_exists f at this,
+  obtain ⟨c, hc⟩ := this,
+  have : a * s ∈ I, {
+    rw zero_mul at hc,
+    let this : (a * ↑s - ↑b) * ↑c ∈ I := hc.symm ▸ I.zero_mem,
+    cases hI.right this with h1 h2,
+    { simpa using I.add_mem h1 b.2 },
+    { exfalso,
+      refine hM ⟨c.2, h2⟩ }
+  },
+  cases hI.right this with h1 h2,
+  { exact h1 },
+  { exfalso,
+    refine hM ⟨s.2, h2⟩ }
+end
 
 /-- If `S` is the localization of `R` at a submonoid, the ordering of ideals of `S` is
 embedded in the ordering of ideals of `R`. -/
@@ -768,6 +837,22 @@ begin
       rw [ideal.mem_comap, ideal.mem_comap] at this,
       rwa [← ha, ← hb, ← mk'_mem_iff, ← mk'_mem_iff] } }
 end
+
+-- TODO: Just inline this into the order_iso proof
+lemma is_prime_of_is_prime_disjoint (I : ideal R) :
+  I.is_prime ∧ disjoint (M : set R) ↑I → (ideal.map f.to_map I).is_prime :=
+λ h, by rwa [is_prime_iff_is_prime_disjoint f, comap_map_of_is_prime_disjoint f I h.1 h.2]
+
+def le_order_iso_of_prime (f : localization_map M S) :
+  ((≤) : {p : ideal S // p.is_prime} → {p : ideal S // p.is_prime} → Prop) ≃o
+  ((≤) : {p : ideal R // p.is_prime ∧ disjoint (M : set R) ↑p}
+            → {p : ideal R // p.is_prime ∧ disjoint (M : set R) ↑p} → Prop) :=
+{ to_fun := λ p, ⟨ideal.comap f.to_map p.1, (is_prime_iff_is_prime_disjoint f p.1).1 p.2⟩,
+  inv_fun := λ p, ⟨ideal.map f.to_map p.1, (is_prime_of_is_prime_disjoint f p.1) p.2⟩,
+  left_inv := λ J, subtype.eq (map_comap f J),
+  right_inv := λ I, subtype.eq (comap_map_of_is_prime_disjoint f I.1 I.2.1 I.2.2),
+  ord' := λ I I', ⟨λ h x hx, h hx, λ h, (show I.val ≤ I'.val,
+    from (map_comap f I.val) ▸ (map_comap f I'.val) ▸ (ideal.map_mono h))⟩ }
 
 end ideals
 
