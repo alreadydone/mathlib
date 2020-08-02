@@ -3,26 +3,41 @@ Copyright (c) 2018 Michael Jendrusch. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Michael Jendrusch, Scott Morrison
 -/
-import category_theory.types
-import category_theory.monoidal.category
+import category_theory.monoidal.of_has_finite_products
+import category_theory.limits.shapes.finite_products
+import category_theory.limits.shapes.types
 
 open category_theory
+open category_theory.limits
 open tactic
 
 universes u v
 
 namespace category_theory.monoidal
 
-instance types : monoidal_category.{u+1} (Type u) :=
-{ tensor_obj := λ X Y, X × Y,
-  tensor_hom := λ _ _ _ _ f g, prod.map f g,
-  tensor_unit := punit,
-  left_unitor := λ X, (equiv.punit_prod X).to_iso,
-  right_unitor := λ X, (equiv.prod_punit X).to_iso,
-  associator := λ X Y Z, (equiv.prod_assoc X Y Z).to_iso,
-  ..category_theory.types.{u+1} }
+local attribute [instance] types.types_has_terminal types.types_has_binary_products
+local attribute [instance] monoidal_of_has_finite_products
 
--- TODO Once we add braided/symmetric categories, include the braiding.
--- TODO More generally, define the symmetric monoidal structure on any category with products.
+instance types : monoidal_category.{u} (Type u) := by apply_instance
+
+-- TODO Once we add braided/symmetric categories, include the braiding/symmetry.
+
+@[simp] lemma tensor_apply {W X Y Z : Type u} (f : W ⟶ X) (g : Y ⟶ Z) (p : W ⊗ Y) :
+  (f ⊗ g) p = (f p.1, g p.2) := rfl
+
+@[simp] lemma left_unitor_hom_apply {X : Type u} {x : X} {p : punit} :
+  ((λ_ X).hom : (𝟙_ (Type u)) ⊗ X → X) (p, x) = x := rfl
+@[simp] lemma left_unitor_inv_apply {X : Type u} {x : X} :
+  ((λ_ X).inv : X ⟶ (𝟙_ (Type u)) ⊗ X) x = (punit.star, x) := rfl
+
+@[simp] lemma right_unitor_hom_apply {X : Type u} {x : X} {p : punit} :
+  ((ρ_ X).hom : X ⊗ (𝟙_ (Type u)) → X) (x, p) = x := rfl
+@[simp] lemma right_unitor_inv_apply {X : Type u} {x : X} :
+  ((ρ_ X).inv : X ⟶ X ⊗ (𝟙_ (Type u))) x = (x, punit.star) := rfl
+
+@[simp] lemma associator_hom_apply {X Y Z : Type u} {x : X} {y : Y} {z : Z} :
+  ((α_ X Y Z).hom : (X ⊗ Y) ⊗ Z → X ⊗ (Y ⊗ Z)) ((x, y), z) = (x, (y, z)) := rfl
+@[simp] lemma associator_inv_apply {X Y Z : Type u} {x : X} {y : Y} {z : Z} :
+  ((α_ X Y Z).inv : X ⊗ (Y ⊗ Z) → (X ⊗ Y) ⊗ Z) (x, (y, z)) = ((x, y), z) := rfl
 
 end category_theory.monoidal
