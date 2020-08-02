@@ -455,30 +455,50 @@ variables {ι : Type v}
 theorem prod_le_inf {s : finset ι} {f : ι → ideal R} : s.prod f ≤ s.inf f :=
 begin
   classical, refine s.induction_on _ _,
-  { rw [finset.prod_empty, finset.inf_empty], exact le_refl _ },
- intros a s has ih,
+  { rw [finset.prod_empty, finset.inf_empty], exact le_top },
+  intros a s has ih,
   rw [finset.prod_insert has, finset.inf_insert],
   exact le_trans mul_le_inf (inf_le_inf (le_refl _) ih)
 end
 
-theorem is_prime.prod_le {s : finset ι} {f : ι → ideal R} {P : ideal R} (hp : is_prime P) :
+theorem is_prime.prod_le {s : finset ι} {f : ι → ideal R} {P : ideal R} (hp : is_prime P)
+  (hne: s.nonempty) :
   s.prod f ≤ P ↔ ∃ i ∈ s, f i ≤ P :=
 suffices s.prod f ≤ P → ∃ i ∈ s, f i ≤ P,
   from ⟨this, λ ⟨i, his, hip⟩, le_trans prod_le_inf $ le_trans (finset.inf_le his) hip⟩,
 begin
-  classical, refine s.induction_on _ _,
-  { intro h, rw finset.prod_empty at h,
-    exact (hp.1 $ eq_top_iff.2 h).elim },
-  intros a s has ih h,
-  rw [finset.prod_insert has, hp.mul_le] at h, cases h,
-  { exact ⟨a, finset.mem_insert_self a s, h⟩ },
-  rcases ih h with ⟨i, hi, ih⟩,
-  exact ⟨i, finset.mem_insert_of_mem hi, ih⟩
+  classical,
+
+  -- Split s into {a} ∪ t, so we can perform induction on t.
+  rcases hne.bex with ⟨a, ha⟩,
+  have : ∃ t, a ∉ t ∧ insert a t = s := ⟨s.erase a, s.not_mem_erase a, finset.insert_erase ha⟩,
+  rcases this with ⟨t, hat, hits⟩,
+  rw ← hits,
+  revert hat,
+
+  refine t.induction_on _ _,
+  { simp },
+
+  intros b s' hbs ih has hprod,
+  -- Move the b out of the product to apply the induction hypothesis.
+  have : b ≠ a := λ heq, by { rw heq at has, exact has (finset.mem_insert_self _ _) },
+  have : b ∉ insert a s' := λ h, hbs $ finset.mem_of_mem_insert_of_ne h this,
+  rw [finset.insert.comm, finset.prod_insert this, hp.mul_le] at hprod,
+  rw finset.insert.comm,
+
+  cases hprod with hfb his,
+  { exact ⟨b, finset.mem_insert_self b _, hfb⟩ },
+
+  have : a ∉ s' := λ h, has $ finset.mem_insert_of_mem h,
+  obtain ⟨c, hcs, hc⟩ := ih this his,
+  exact ⟨c, finset.mem_insert_of_mem hcs, hc⟩,
 end
 
-theorem is_prime.inf_le' {s : finset ι} {f : ι → ideal R} {P : ideal R} (hp : is_prime P) :
+theorem is_prime.inf_le' {s : finset ι} {f : ι → ideal R} {P : ideal R} (hp : is_prime P)
+  (hsne: s.nonempty):
   s.inf f ≤ P ↔ ∃ i ∈ s, f i ≤ P :=
-⟨λ h, hp.prod_le.1 $ le_trans prod_le_inf h, λ ⟨i, his, hip⟩, le_trans (finset.inf_le his) hip⟩
+⟨λ h, (hp.prod_le hsne).1 $ le_trans prod_le_inf h,
+  λ ⟨i, his, hip⟩, le_trans (finset.inf_le his) hip⟩
 
 theorem subset_union {I J K : ideal R} : (I : set R) ⊆ J ∪ K ↔ I ≤ J ∨ I ≤ K :=
 ⟨λ h, classical.or_iff_not_imp_left.2 $ λ hij s hsi,
@@ -504,11 +524,13 @@ begin
   induction n with n ih generalizing a b s,
   case nat.zero { rw finset.card_eq_zero at hn, subst hn,
     rw [finset.coe_empty, set.bUnion_empty, set.union_empty, subset_union] at h,
-    simpa only [exists_prop, finset.not_mem_empty, false_and, exists_false, or_false] },
+    exact or.assoc.mp (or.inl h) },
+
   classical,
-  replace hn : ∃ (i : ι) (t : finset ι), i ∉ t ∧ insert i t = s ∧ t.card = n := finset.card_eq_succ.1 hn,
+  rw finset.card_eq_succ at hn,
   rcases hn with ⟨i, t, hit, rfl, hn⟩,
-  replace hp : is_prime (f i) ∧ ∀ x ∈ t, is_prime (f x) := (t.forall_mem_insert _ _).1 hp,
+  rw finset.forall_mem_insert at hp,
+
   by_cases Ht : ∃ j ∈ t, f j ≤ f i,
   { rcases Ht with ⟨j, hjt, hfji⟩,
     have : ∃ u, j ∉ u ∧ insert j u = t,
@@ -526,8 +548,9 @@ begin
     specialize @ih a b (insert i u) hp' hn' h',
     refine ih.imp id (or.imp id (exists_imp_exists $ λ k, _)), simp only [exists_prop],
     exact and.imp (λ hk, finset.insert_subset_insert i (finset.subset_insert j u) hk) id },
+
   by_cases Ha : f a ≤ f i,
-  { have h' : (I : set R) ⊆ f i ∪ f b ∪ (⋃ j ∈ (↑t : set ι), f j),
+  { have h' : (I : set R) ⊆ f i ∪ f b ∪ (⋃ j ∈ t, f j),
     { rwa [finset.coe_insert, set.bUnion_insert, ← set.union_assoc, set.union_right_comm ↑(f a),
           set.union_eq_self_of_subset_left Ha] at h },
     specialize @ih i b t hp.2 hn h', right,
@@ -535,8 +558,9 @@ begin
     { exact or.inr ⟨i, finset.mem_insert_self i t, ih⟩ },
     { exact or.inl ih },
     { exact or.inr ⟨k, finset.mem_insert_of_mem hkt, ih⟩ } },
+
   by_cases Hb : f b ≤ f i,
-  { have h' : (I : set R) ⊆ f a ∪ f i ∪ (⋃ j ∈ (↑t : set ι), f j),
+  { have h' : (I : set R) ⊆ f a ∪ f i ∪ (⋃ j ∈ t, f j),
     { rwa [finset.coe_insert, set.bUnion_insert, ← set.union_assoc, set.union_assoc ↑(f a),
           set.union_eq_self_of_subset_left Hb] at h },
     specialize @ih a i t hp.2 hn h',
@@ -544,18 +568,29 @@ begin
     { exact or.inl ih },
     { exact or.inr (or.inr ⟨i, finset.mem_insert_self i t, ih⟩) },
     { exact or.inr (or.inr ⟨k, finset.mem_insert_of_mem hkt, ih⟩) } },
+
   by_cases Hi : I ≤ f i,
   { exact or.inr (or.inr ⟨i, finset.mem_insert_self i t, Hi⟩) },
+
   have : ¬I ⊓ f a ⊓ f b ⊓ t.inf f ≤ f i,
-  { simp only [hp.1.inf_le, hp.1.inf_le', not_or_distrib], exact ⟨⟨⟨Hi, Ha⟩, Hb⟩, Ht⟩ },
+  { cases t.eq_empty_or_nonempty with hse hsne,
+    { subst hse,
+      rw [finset.inf_empty, inf_top_eq, hp.1.inf_le, hp.1.inf_le, not_or_distrib, not_or_distrib],
+      exact ⟨⟨Hi, Ha⟩, Hb⟩ },
+
+    simp only [hp.1.inf_le, hp.1.inf_le' hsne, not_or_distrib],
+    exact ⟨⟨⟨Hi, Ha⟩, Hb⟩, Ht⟩ },
+
   rcases set.not_subset.1 this with ⟨r, ⟨⟨⟨hrI, hra⟩, hrb⟩, hr⟩, hri⟩,
-  by_cases HI : (I : set R) ⊆ f a ∪ f b ∪ ⋃ j ∈ (↑t : set ι), f j,
+  by_cases HI : (I : set R) ⊆ f a ∪ f b ∪ ⋃ j ∈ t, f j,
   { specialize ih hp.2 hn HI, rcases ih with ih | ih | ⟨k, hkt, ih⟩,
     { left, exact ih }, { right, left, exact ih },
     { right, right, exact ⟨k, finset.mem_insert_of_mem hkt, ih⟩ } },
+
   exfalso, rcases set.not_subset.1 HI with ⟨s, hsI, hs⟩,
   rw [finset.coe_insert, set.bUnion_insert] at h,
   have hsi : s ∈ f i := ((h hsI).resolve_left (mt or.inl hs)).resolve_right (mt or.inr hs),
+
   rcases h (I.add_mem hrI hsI) with ⟨ha | hb⟩ | hi | ht,
   { exact hs (or.inl $ or.inl $ add_sub_cancel' r s ▸ (f a).sub_mem ha hra) },
   { exact hs (or.inl $ or.inr $ add_sub_cancel' r s ▸ (f b).sub_mem hb hrb) },
@@ -612,11 +647,11 @@ begin
       rw [finset.coe_insert, set.bUnion_insert, ← set.union_self (f b : set R),
           subset_union_prime' hp', ← or_assoc, or_self, bex_def] at h,
       rwa finset.exists_mem_insert },
-    by_cases hse : s = ∅,
+    cases s.eq_empty_or_nonempty with hse hsne,
     { subst hse, rw [finset.coe_empty, set.bUnion_empty, set.subset_empty_iff] at h,
-      have : (I : set R) ≠ ∅ := set.ne_empty_of_mem I.zero_mem,
+      have : (I : set R) ≠ ∅ := set.nonempty.ne_empty (set.nonempty_of_mem I.zero_mem),
       exact absurd h this },
-    { cases finset.exists_mem_of_ne_empty hse with i his,
+    { cases hsne.bex with i his,
       have : ∃ t, i ∉ t ∧ insert i t = s :=
         ⟨s.erase i, finset.not_mem_erase i s, finset.insert_erase his⟩,
       rcases this with ⟨t, hit, rfl⟩,
