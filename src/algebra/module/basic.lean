@@ -220,15 +220,15 @@ end
 
 @[simp] lemma smul_eq_mul [semiring R] {a a' : R} : a • a' = a * a' := rfl
 
-/-- A ring homomorphism `f : R →+* M` defines a module structure by `r • x = f r * x`. -/
+/-- A ring homomorphism `f : R →+* S` induces an `R`-module structure on every `S`-module via
+    `r • m = f r • m`. -/
+def module.comap [semiring R] [semiring S] (f : R →+* S) [add_comm_monoid M]
+  [semimodule S M] : semimodule R M :=
+by refine { smul := λ r m, f r • m, .. }; intros; simp [mul_smul, smul_add, add_smul, zero_smul]
+
+/-- A ring homomorphism `f : R →+* S` defines a module structure by `r • x = f r * x`. -/
 def ring_hom.to_semimodule [semiring R] [semiring S] (f : R →+* S) : semimodule R S :=
-{ smul := λ r x, f r * x,
-  smul_add := λ r x y, by unfold has_scalar.smul; rw [mul_add],
-  add_smul := λ r s x, by unfold has_scalar.smul; rw [f.map_add, add_mul],
-  mul_smul := λ r s x, by unfold has_scalar.smul; rw [f.map_mul, mul_assoc],
-  one_smul := λ x, show f 1 * x = _, by rw [f.map_one, one_mul],
-  zero_smul := λ x, show f 0 * x = 0, by rw [f.map_zero, zero_mul],
-  smul_zero := λ r, mul_zero (f r) }
+module.comap f
 
 /-- A map `f` between semimodules over a semiring is linear if it satisfies the two properties
 `f (x + y) = f x + f y` and `f (c • x) = c • f x`. The predicate `is_linear_map R f` asserts this
