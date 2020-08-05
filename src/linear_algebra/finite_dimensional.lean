@@ -553,6 +553,77 @@ by { rw [← f.quot_ker_equiv_range.findim_eq], exact submodule.findim_quotient_
 
 end linear_map
 
+namespace finite_dimensional
+
+@[simp] lemma findim_top [finite_dimensional K V] :
+  findim K (⊤ : submodule K V) = findim K V :=
+linear_equiv.findim_eq (linear_equiv.of_top _ rfl)
+
+lemma findim_span_le_card (s : set V) [fin : fintype s] :
+  findim K (span K s) ≤ s.to_finset.card :=
+begin
+  haveI := span_of_finite K ⟨fin⟩,
+  have : dim K (span K s) ≤ (mk s : cardinal) := dim_span_le s,
+  rw [←findim_eq_dim, cardinal.fintype_card, ←set.to_finset_card] at this,
+  exact_mod_cast this
+end
+
+lemma span_lt_top_of_card_lt_findim {s : set V} [fintype s]
+  [finite_dimensional K V] -- TODO: relax finite_dimensional assumption? its negation implies card < 0.
+  (card_lt : s.to_finset.card < findim K V) :
+  span K s < ⊤ :=
+begin
+  refine lt_of_le_of_ne le_top (λ h, not_le_of_lt card_lt _),
+  calc findim K V = findim K (⊤ : submodule K V) : by rw findim_top
+              ... = findim K (span K s) : by rw h
+              ... ≤ s.to_finset.card : findim_span_le_card s
+end
+
+lemma is_basis_of_span_eq_top_of_card_eq_findim {s : set V} [fintype s]
+  [finite_dimensional K V] -- TODO: relax finite_dimensional assumption?
+  (span_eq : span K s = ⊤) (card_eq : s.to_finset.card = findim K V) :
+  is_basis K (λ (x : s), (x : V)) :=
+begin
+  split,
+  { apply linear_independent_iff'.mpr,
+    rintros s' g sum_eq x x_mem_s',
+    by_contra gx_ne_zero,
+    have : (x : V) = -(g x)⁻¹ • ((s'.erase x).sum (λ y, g y • y) : V),
+    { rw neg_smul,
+      apply eq_neg_of_add_eq_zero,
+      calc  (x : V) + (g x)⁻¹ • ((s'.erase x).sum (λ y, g y • y) : V)
+          = (g x)⁻¹ • (g x • x + (s'.erase x).sum (λ y, g y • y) : V)
+        : by rw [smul_add, ←mul_smul, inv_mul_cancel gx_ne_zero, one_smul]
+      ... = (g x)⁻¹ • 0 : _
+      ... = 0 : smul_zero _,
+      refine congr_arg _ _,
+      rwa [← finset.insert_erase x_mem_s', finset.sum_insert (finset.not_mem_erase _ _)] at sum_eq },
+    set s'' : set V := s \ {x} with s''_def,
+    have : (x : V) ∈ span K s'',
+    { rw this,
+      refine smul_mem _ _ (sum_mem _ (λ y hy, smul_mem _ _ (subset_span ⟨y.2, _⟩))),
+      intro h,
+      exact (finset.mem_erase.mp hy).1 (subtype.ext (set.mem_singleton_iff.mpr h))},
+    have : span K (s \ {x}) = ⊤,
+    { refine trans (le_antisymm (span_mono _) (span_le.mpr _)) span_eq,
+      { rintros y ⟨y_mem_s, _⟩,
+        exact y_mem_s },
+      { rintros y y_mem_s,
+        by_cases hy : y = x,
+        { rwa [hy] },
+        { exact subset_span ((set.mem_diff _).mpr ⟨y_mem_s, mt set.mem_singleton_iff.mp hy⟩) } } },
+    haveI sdiff_fin : fintype (s \ {x} : set _) :=
+      fintype.subtype (s.to_finset.erase x) (by simp [and_comm]),
+    refine ne_of_lt (@span_lt_top_of_card_lt_findim _ _ _ _ _ _ sdiff_fin _ _) this,
+    calc (s \ {x}).to_finset.card
+        = (s.to_finset.erase x).card : congr_arg finset.card (finset.ext (by simp [and_comm]))
+    ... < s.to_finset.card : finset.card_erase_lt_of_mem (set.mem_to_finset.mpr x.2)
+    ... = findim K V : card_eq },
+  { simpa },
+end
+
+end finite_dimensional
+
 section zero_dim
 
 open vector_space finite_dimensional
