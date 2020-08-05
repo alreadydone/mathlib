@@ -569,58 +569,76 @@ begin
 end
 
 lemma span_lt_top_of_card_lt_findim {s : set V} [fintype s]
-  [finite_dimensional K V] -- TODO: relax finite_dimensional assumption? its negation implies card < 0.
   (card_lt : s.to_finset.card < findim K V) :
   span K s < ⊤ :=
 begin
-  refine lt_of_le_of_ne le_top (λ h, not_le_of_lt card_lt _),
-  calc findim K V = findim K (⊤ : submodule K V) : by rw findim_top
-              ... = findim K (span K s) : by rw h
-              ... ≤ s.to_finset.card : findim_span_le_card s
+  by_cases fin : (finite_dimensional K V),
+  { haveI := fin,
+    refine lt_of_le_of_ne le_top (λ h, not_le_of_lt card_lt _),
+    calc findim K V = findim K (⊤ : submodule K V) : by rw findim_top
+    ... = findim K (span K s) : by rw h
+    ... ≤ s.to_finset.card : findim_span_le_card s },
+  { exfalso,
+    have : findim K V = 0 := dif_neg (mt finite_dimensional_iff_dim_lt_omega.mpr fin),
+    rw this at card_lt,
+    exact nat.not_lt_zero s.to_finset.card card_lt }
 end
 
-lemma is_basis_of_span_eq_top_of_card_eq_findim {s : set V} [fintype s]
-  [finite_dimensional K V] -- TODO: relax finite_dimensional assumption?
-  (span_eq : span K s = ⊤) (card_eq : s.to_finset.card = findim K V) :
-  is_basis K (λ (x : s), (x : V)) :=
+lemma is_basis_of_span_eq_top_of_card_eq_findim {ι : Type*} [fintype ι] {b : ι → V}
+  (span_eq : span K (set.range b) = ⊤) (card_eq : fintype.card ι = findim K V) :
+  is_basis K b :=
 begin
   split,
   { apply linear_independent_iff'.mpr,
-    rintros s' g sum_eq x x_mem_s',
+    rintros s g sum_eq i i_mem_s,
     by_contra gx_ne_zero,
-    have : (x : V) = -(g x)⁻¹ • ((s'.erase x).sum (λ y, g y • y) : V),
+    have : b i = -(g i)⁻¹ • (s.erase i).sum (λ j, g j • b j),
     { rw neg_smul,
       apply eq_neg_of_add_eq_zero,
-      calc  (x : V) + (g x)⁻¹ • ((s'.erase x).sum (λ y, g y • y) : V)
-          = (g x)⁻¹ • (g x • x + (s'.erase x).sum (λ y, g y • y) : V)
+      calc b i + (g i)⁻¹ • (s.erase i).sum (λ j, g j • b j)
+          = (g i)⁻¹ • (g i • b i + (s.erase i).sum (λ j, g j • b j))
         : by rw [smul_add, ←mul_smul, inv_mul_cancel gx_ne_zero, one_smul]
-      ... = (g x)⁻¹ • 0 : _
+      ... = (g i)⁻¹ • 0 : _
       ... = 0 : smul_zero _,
       refine congr_arg _ _,
-      rwa [← finset.insert_erase x_mem_s', finset.sum_insert (finset.not_mem_erase _ _)] at sum_eq },
-    set s'' : set V := s \ {x} with s''_def,
-    have : (x : V) ∈ span K s'',
+      rwa [← finset.insert_erase i_mem_s, finset.sum_insert (finset.not_mem_erase _ _)] at sum_eq },
+    have : b i ∈ span K (b '' (set.univ \ {i})),
     { rw this,
-      refine smul_mem _ _ (sum_mem _ (λ y hy, smul_mem _ _ (subset_span ⟨y.2, _⟩))),
-      intro h,
-      exact (finset.mem_erase.mp hy).1 (subtype.ext (set.mem_singleton_iff.mpr h))},
-    have : span K (s \ {x}) = ⊤,
+      refine smul_mem _ _ (sum_mem _ (λ y hy, smul_mem _ _ (subset_span ⟨y, _, rfl⟩))),
+      simpa using (finset.mem_erase.mp hy).1 },
+    have : span K (b '' (set.univ \ {i})) = ⊤,
     { refine trans (le_antisymm (span_mono _) (span_le.mpr _)) span_eq,
-      { rintros y ⟨y_mem_s, _⟩,
-        exact y_mem_s },
-      { rintros y y_mem_s,
-        by_cases hy : y = x,
+      { rintros _ ⟨j, _, rfl⟩,
+        exact ⟨j, rfl⟩ },
+      { rintros _ ⟨j, rfl, rfl⟩,
+        by_cases hy : j = i,
         { rwa [hy] },
-        { exact subset_span ((set.mem_diff _).mpr ⟨y_mem_s, mt set.mem_singleton_iff.mp hy⟩) } } },
-    haveI sdiff_fin : fintype (s \ {x} : set _) :=
-      fintype.subtype (s.to_finset.erase x) (by simp [and_comm]),
-    refine ne_of_lt (@span_lt_top_of_card_lt_findim _ _ _ _ _ _ sdiff_fin _ _) this,
-    calc (s \ {x}).to_finset.card
-        = (s.to_finset.erase x).card : congr_arg finset.card (finset.ext (by simp [and_comm]))
-    ... < s.to_finset.card : finset.card_erase_lt_of_mem (set.mem_to_finset.mpr x.2)
+        { refine subset_span ⟨j, (set.mem_diff _).mpr ⟨set.mem_univ _, _⟩, rfl⟩,
+          exact mt set.mem_singleton_iff.mp hy } } },
+    refine ne_of_lt (span_lt_top_of_card_lt_findim _) this,
+    calc (b '' (set.univ \ {i})).to_finset.card
+        = ((set.univ \ {i}).to_finset.image b).card
+      : by rw [set.to_finset_card, fintype.card_of_finset]
+    ... ≤ (set.univ \ {i}).to_finset.card : finset.card_image_le
+    ... = (finset.univ.erase i).card : congr_arg finset.card (finset.ext (by simp [and_comm]))
+    ... < finset.univ.card : finset.card_erase_lt_of_mem (finset.mem_univ i)
     ... = findim K V : card_eq },
   { simpa },
 end
+
+lemma finset_is_basis_of_span_eq_top_of_card_eq_findim {s : finset V}
+  (span_eq : span K (↑s : set V) = ⊤) (card_eq : s.card = findim K V) :
+  is_basis K (coe : (↑s : set V) → V) :=
+is_basis_of_span_eq_top_of_card_eq_findim
+  ((@subtype.range_coe_subtype _ (λ x, x ∈ s)).symm ▸ span_eq)
+  (trans (fintype.card_coe _) card_eq)
+
+lemma set_is_basis_of_span_eq_top_of_card_eq_findim {s : set V} [fintype s]
+  (span_eq : span K s = ⊤) (card_eq : s.to_finset.card = findim K V) :
+  is_basis K (λ (x : s), (x : V)) :=
+is_basis_of_span_eq_top_of_card_eq_findim
+  ((@subtype.range_coe_subtype _ s).symm ▸ span_eq)
+  (trans (set.to_finset_card s).symm card_eq)
 
 end finite_dimensional
 
