@@ -584,47 +584,57 @@ begin
     exact nat.not_lt_zero s.to_finset.card card_lt }
 end
 
-lemma is_basis_of_span_eq_top_of_card_eq_findim {ι : Type*} [fintype ι] {b : ι → V}
+lemma linear_independent_of_span_eq_top_of_card_eq_findim {ι : Type*} [fintype ι] {b : ι → V}
   (span_eq : span K (set.range b) = ⊤) (card_eq : fintype.card ι = findim K V) :
-  is_basis K b :=
+  linear_independent K b :=
+linear_independent_iff'.mpr $ λ s g dependent i i_mem_s,
 begin
-  split,
-  { apply linear_independent_iff'.mpr,
-    rintros s g sum_eq i i_mem_s,
-    by_contra gx_ne_zero,
-    have : b i = -(g i)⁻¹ • (s.erase i).sum (λ j, g j • b j),
-    { rw neg_smul,
-      apply eq_neg_of_add_eq_zero,
-      calc b i + (g i)⁻¹ • (s.erase i).sum (λ j, g j • b j)
-          = (g i)⁻¹ • (g i • b i + (s.erase i).sum (λ j, g j • b j))
-        : by rw [smul_add, ←mul_smul, inv_mul_cancel gx_ne_zero, one_smul]
-      ... = (g i)⁻¹ • 0 : _
-      ... = 0 : smul_zero _,
-      refine congr_arg _ _,
-      rwa [← finset.insert_erase i_mem_s, finset.sum_insert (finset.not_mem_erase _ _)] at sum_eq },
-    have : b i ∈ span K (b '' (set.univ \ {i})),
-    { rw this,
-      refine smul_mem _ _ (sum_mem _ (λ y hy, smul_mem _ _ (subset_span ⟨y, _, rfl⟩))),
-      simpa using (finset.mem_erase.mp hy).1 },
-    have : span K (b '' (set.univ \ {i})) = ⊤,
-    { refine trans (le_antisymm (span_mono _) (span_le.mpr _)) span_eq,
-      { rintros _ ⟨j, _, rfl⟩,
-        exact ⟨j, rfl⟩ },
-      { rintros _ ⟨j, rfl, rfl⟩,
-        by_cases hy : j = i,
-        { rwa [hy] },
-        { refine subset_span ⟨j, (set.mem_diff _).mpr ⟨set.mem_univ _, _⟩, rfl⟩,
-          exact mt set.mem_singleton_iff.mp hy } } },
-    refine ne_of_lt (span_lt_top_of_card_lt_findim _) this,
-    calc (b '' (set.univ \ {i})).to_finset.card
-        = ((set.univ \ {i}).to_finset.image b).card
+  by_contra gx_ne_zero,
+  -- We'll derive a contradiction by showing `b '' (univ \ {i})` of cardinality `n - 1`
+  -- spans a vector space of dimension `n`.
+  refine ne_of_lt (span_lt_top_of_card_lt_findim
+    (show (b '' (set.univ \ {i})).to_finset.card < findim K V, from _)) _,
+  { calc (b '' (set.univ \ {i})).to_finset.card = ((set.univ \ {i}).to_finset.image b).card
       : by rw [set.to_finset_card, fintype.card_of_finset]
     ... ≤ (set.univ \ {i}).to_finset.card : finset.card_image_le
     ... = (finset.univ.erase i).card : congr_arg finset.card (finset.ext (by simp [and_comm]))
     ... < finset.univ.card : finset.card_erase_lt_of_mem (finset.mem_univ i)
     ... = findim K V : card_eq },
-  { simpa },
+
+  -- We already have that `b '' univ` spans the whole space,
+  -- so we only need to show that the span of `b '' (univ \ {i})` contains each `b j`.
+  refine trans (le_antisymm (span_mono (set.image_subset_range _ _)) (span_le.mpr _)) span_eq,
+  rintros _ ⟨j, rfl, rfl⟩,
+  -- The case that `j ≠ i` is easy because `b j ∈ b '' (univ \ {i})`.
+  by_cases j_eq : j = i,
+  swap,
+  { refine subset_span ⟨j, (set.mem_diff _).mpr ⟨set.mem_univ _, _⟩, rfl⟩,
+    exact mt set.mem_singleton_iff.mp j_eq },
+
+  -- To show `b i ∈ span (b '' (univ \ {i}))`, we use that it's a weighted sum
+  -- of the other `b j`s.
+  rw [j_eq, mem_coe, show b i = -((g i)⁻¹ • (s.erase i).sum (λ j, g j • b j)), from _],
+  { refine submodule.neg_mem _ (smul_mem _ _ (sum_mem _ (λ k hk, _))),
+    obtain ⟨k_ne_i, k_mem⟩ := finset.mem_erase.mp hk,
+    refine smul_mem _ _ (subset_span ⟨k, _, rfl⟩),
+    simpa using k_mem },
+
+  -- To show `b i` is a weighted sum of the other `b j`s, we'll rewrite this sum
+  -- to have the form of the assumption `dependent`.
+  apply eq_neg_of_add_eq_zero,
+  calc b i + (g i)⁻¹ • (s.erase i).sum (λ j, g j • b j)
+      = (g i)⁻¹ • (g i • b i + (s.erase i).sum (λ j, g j • b j))
+    : by rw [smul_add, ←mul_smul, inv_mul_cancel gx_ne_zero, one_smul]
+  ... = (g i)⁻¹ • 0 : congr_arg _ _
+  ... = 0           : smul_zero _,
+  -- And then it's just a bit of manipulation with finite sums.
+  rwa [← finset.insert_erase i_mem_s, finset.sum_insert (finset.not_mem_erase _ _)] at dependent
 end
+
+lemma is_basis_of_span_eq_top_of_card_eq_findim {ι : Type*} [fintype ι] {b : ι → V}
+  (span_eq : span K (set.range b) = ⊤) (card_eq : fintype.card ι = findim K V) :
+  is_basis K b :=
+⟨linear_independent_of_span_eq_top_of_card_eq_findim span_eq card_eq, span_eq⟩
 
 lemma finset_is_basis_of_span_eq_top_of_card_eq_findim {s : finset V}
   (span_eq : span K (↑s : set V) = ⊤) (card_eq : s.card = findim K V) :
@@ -639,6 +649,14 @@ lemma set_is_basis_of_span_eq_top_of_card_eq_findim {s : set V} [fintype s]
 is_basis_of_span_eq_top_of_card_eq_findim
   ((@subtype.range_coe_subtype _ s).symm ▸ span_eq)
   (trans (set.to_finset_card s).symm card_eq)
+
+lemma is_basis_of_linear_independent_of_card_eq_findim {ι : Type*} [fintype ι] {b : ι → V}
+  (lin_ind : linear_independent K b) (card_eq : fintype.card ι = findim K V) :
+  is_basis K b :=
+begin
+  refine ⟨lin_ind, _⟩,
+
+end
 
 end finite_dimensional
 
