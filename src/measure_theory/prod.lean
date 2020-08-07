@@ -21,8 +21,26 @@ Fubini's theorem
 -/
 noncomputable theory
 open_locale classical big_operators
-open function
 
+namespace function
+/-- Evaluation a function to an argument. Useful if you want to talk about the partially applied
+  `function.apply i : (Π i, α i) → α i`. -/
+@[reducible] def eval {ι} {α : ι → Type*} (i : ι) (f : Π i, α i) : α i := f i
+
+@[simp] lemma eval_apply {ι} {α : ι → Type*} (i : ι) (f : Π i, α i) : eval i f = f i := rfl
+
+example {ι : Type*} {α : ι → Type*} (i : ι) (g : (Π i, α i) → α i) (s : set (Π i, α i)) :
+  eval i '' s = g '' s :=
+begin
+  success_if_fail { simp only [eval_apply] },
+  simp, -- why does this simplify?
+  sorry
+end
+
+
+end function
+
+open function measure_theory.outer_measure
 
 namespace set
 section
@@ -59,8 +77,7 @@ end
 lemma pi_univ_eq_empty_iff : pi univ t = ∅ ↔ ∃ i, t i = ∅ :=
 by simp [← not_nonempty_iff_eq_empty, pi_univ_nonempty_iff]
 
-lemma apply_image_pi {i : ι} (hs : i ∈ s) (ht : (s.pi t).nonempty) :
-  (λ f : Π i, α i, f i) '' s.pi t = t i :=
+lemma eval_image_pi {i : ι} (hs : i ∈ s) (ht : (s.pi t).nonempty) : eval i '' s.pi t = t i :=
 begin
   ext x, rcases ht with ⟨f, hf⟩, split,
   { rintro ⟨g, hg, rfl⟩, exact hg i hs },
@@ -70,9 +87,9 @@ begin
     { simp at hf, simp [hji, hf, hj] }},
 end
 
-@[simp] lemma apply_image_pi_univ {i : ι} (ht : (pi univ t).nonempty) :
+@[simp] lemma eval_image_pi_univ {i : ι} (ht : (pi univ t).nonempty) :
   (λ f : Π i, α i, f i) '' pi univ t = t i :=
-apply_image_pi (mem_univ i) ht
+eval_image_pi (mem_univ i) ht
 
 lemma update_preimage_pi {i : ι} {f : Π i, α i} (hi : i ∈ s)
   (hf : ∀ j ∈ s, j ≠ i → f j ∈ t j) : (update f i) ⁻¹' s.pi t = t i :=
@@ -87,6 +104,9 @@ end
 lemma update_preimage_pi_univ {i : ι} {f : Π i, α i} (hf : ∀ j ≠ i, f j ∈ t j) :
   (update f i) ⁻¹' pi univ t = t i :=
 update_preimage_pi (mem_univ i) (λ j _, hf j)
+
+lemma subset_pi_eval_image (s : set ι) (u : set (Π i, α i)) : u ⊆ pi s (λ i, eval i '' u) :=
+λ f hf i hi, ⟨f, hf, rfl⟩
 
 end
 
@@ -220,37 +240,60 @@ end
 
 end
 
-variables {ι : Type*} [fintype ι] {α : ι → Type*} {m : ∀ i, outer_measure (α i)}
+variables {ι : Type*} [fintype ι] {α : ι → Type*} {m : Π i, outer_measure (α i)}
 
 /-- An upper bound for the measure in a product space.
   It is defined to be the product of the measures of all its projections.
   For boxes it should be equal to the correct measure
   It is explicitly defined to be 0 for the empty set (which only matters if `ι` is empty. -/
-def pi_premeasure (m : ∀ i, outer_measure (α i)) (s : set (Π i, α i)) : ennreal :=
-if s = ∅ then 0 else ∏ i, m i ((λ f : Π i, α i, f i) '' s)
+def pi_premeasure (m : Π i, outer_measure (α i)) (s : set (Π i, α i)) : ennreal :=
+if s = ∅ then 0 else ∏ i, m i (eval i '' s)
 
 @[simp] lemma pi_premeasure_empty : pi_premeasure m ∅ = 0 :=
 by simp [pi_premeasure]
 
 @[simp] lemma pi_premeasure_nonempty {s : set (Π i, α i)} (hs : s.nonempty) :
-  pi_premeasure m s = ∏ i, m i ((λ f : Π i, α i, f i) '' s) :=
+  pi_premeasure m s = ∏ i, m i (eval i '' s) :=
 by simp [pi_premeasure, hs, ← not_nonempty_iff_eq_empty]
 
 lemma pi_premeasure_le_prod {s : set (Π i, α i)} :
-  pi_premeasure m s ≤ ∏ i, m i ((λ f : Π i, α i, f i) '' s) :=
+  pi_premeasure m s ≤ ∏ i, m i (eval i '' s) :=
 by { cases s.eq_empty_or_nonempty with h h; simp [h, le_refl] }
 
-lemma pi_premeasure_pi (s : Π i, set (α i)) (hs : (pi univ s).nonempty) :
-  pi_premeasure m (pi univ s) = finset.univ.prod (λ i, m i (s i)) :=
+lemma pi_premeasure_pi {s : Π i, set (α i)} (hs : (pi univ s).nonempty) :
+  pi_premeasure m (pi univ s) = ∏ i, m i (s i) :=
 by simp [hs]
 
-/-- The outer measure on a finite product of of types. -/
-def outer_measure.pi (m : ∀ i, outer_measure (α i)) : outer_measure (Π i, α i) :=
+lemma pi_premeasure_pi_le {s : Π i, set (α i)} : pi_premeasure m (pi univ s) ≤ ∏ i, m i (s i) :=
+by { cases (pi univ s).eq_empty_or_nonempty with h h; simp [h, le_refl] }
+
+namespace outer_measure
+/-- `outer_measure.pi m` is the finite product of the outer measures `{m i | i : ι}`.
+  It is defined to be the maximal outer measure `n` with the property that
+  `n (pi univ s) ≤ ∏ i, m i (s i)`, where `pi univ s` is the product of the sets
+  `{ s i | i : ι }`. -/
+protected def pi (m : Π i, outer_measure (α i)) : outer_measure (Π i, α i) :=
 outer_measure.of_function (pi_premeasure m) pi_premeasure_empty
+
+lemma pi_pi_le {s : Π i, set (α i)} :
+  outer_measure.pi m (pi univ s) ≤ ∏ i, m i (s i) :=
+le_trans (of_function_le _) pi_premeasure_pi_le
+
+lemma le_pi {m : Π i, outer_measure (α i)} {n : outer_measure (Π i, α i)} :
+  n ≤ outer_measure.pi m ↔ ∀ (s : Π i, set (α i)), n (pi univ s) ≤ ∏ i, m i (s i) :=
+begin
+  rw [outer_measure.pi, le_of_function], split,
+  { intros h s, refine le_trans (h _) pi_premeasure_pi_le },
+  { intros h s,
+    cases s.eq_empty_or_nonempty with hs hs, { simp [hs] },
+    refine le_trans (n.mono $ subset_pi_eval_image univ s) _, simp [h, hs] }
+end
+
+end outer_measure
 
 namespace measure
 
-variables [∀ i, measurable_space (α i)] (μ : ∀ i, measure (α i))
+variables [Π i, measurable_space (α i)] (μ : Π i, measure (α i))
 
 protected lemma caratheodory {α} [measurable_space α] (μ : measure α) {s t : set α}
   (hs : is_measurable s) : μ (t ∩ s) + μ (t \ s) = μ t :=
@@ -261,30 +304,32 @@ lemma pi_caratheodory :
 begin
   refine supr_le _, intros i s hs,
   simp [measurable_space.comap] at hs, rcases hs with ⟨s, hs, rfl⟩,
-  apply outer_measure.of_function_caratheodory,
+  apply of_function_caratheodory,
   intro t, cases t.eq_empty_or_nonempty with h h, { simp [h] },
   rw [pi_premeasure_nonempty h],
   refine le_trans (add_le_add pi_premeasure_le_prod pi_premeasure_le_prod) _,
   refine finset.prod_univ_add_prod_univ_le' i _ _ _,
   { simp [image_inter_preimage, image_compl_preimage, (μ i).caratheodory hs, le_refl] },
-  { intros j hj, apply outer_measure.mono', apply image_subset, apply inter_subset_left },
-  { intros j hj, apply outer_measure.mono', apply image_subset, apply diff_subset }
+  { intros j hj, apply mono', apply image_subset, apply inter_subset_left },
+  { intros j hj, apply mono', apply image_subset, apply diff_subset }
 end
 
+/-- `measure.pi μ` is the finite product of the measures `{μ i | i : ι}`.
+  It is defined to be the maximal product measure, i.e.
+  the maximal measure `n` with the property that `ν (pi univ s) = ∏ i, μ i (s i)`,
+  where `pi univ s` is the product of the sets `{ s i | i : ι }`. -/
 protected def pi : measure (Π i, α i) :=
-outer_measure.to_measure (outer_measure.pi (λ i, (μ i).to_outer_measure)) (pi_caratheodory μ)
+to_measure (outer_measure.pi (λ i, (μ i).to_outer_measure)) (pi_caratheodory μ)
 
 lemma pi_pi (s : Π i, set (α i)) (hs : (pi univ s).nonempty) :
-  measure.pi μ (pi univ s) = finset.univ.prod (λ i, μ i (s i)) :=
+  measure.pi μ (pi univ s) = ∏ i, μ i (s i) :=
 begin
   sorry
 end
 
-def measure.pi2 : measurable_space (Π i, α i) := by apply_instance
-
-#print measure.pi2
-#print measurable_space.pi
 
 end measure
 
 end measure_theory
+
+#lint
