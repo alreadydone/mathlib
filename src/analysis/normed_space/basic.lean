@@ -981,21 +981,59 @@ lemma normed_algebra.to_nonzero : nontrivial 𝕜' :=
 
 end normed_algebra
 
+-- section restrict_scalars
+
+-- variables (𝕜 : Type*) (𝕜' : Type*) [normed_field 𝕜] [normed_field 𝕜'] [normed_algebra 𝕜 𝕜']
+-- {E : Type*} [normed_group E] [normed_space 𝕜' E]
+
+-- /-- `𝕜`-normed space structure induced by a `𝕜'`-normed space structure when `𝕜'` is a
+-- normed algebra over `𝕜`. Not registered as an instance as `𝕜'` can not be inferred. -/
+-- -- We could add a type synonym equipped with this as an instance,
+-- -- as we've done for `module.restrict_scalars`.
+-- def normed_space.restrict_scalars : normed_space 𝕜 E :=
+-- { norm_smul_le := λc x, le_of_eq $ begin
+--     change ∥(algebra_map 𝕜 𝕜' c) • x∥ = ∥c∥ * ∥x∥,
+--     simp [norm_smul]
+--   end,
+--   ..module.restrict_scalars' 𝕜 𝕜' E }
+
+-- end restrict_scalars
+
 section restrict_scalars
+/- This is an experimental rewrite of `normed_space.restrict_scalars`, copied line by line from
+`module.restrict_scalars`. For now, only the first ~30 of ~120 lines are transferred. -/
 
-variables (𝕜 : Type*) (𝕜' : Type*) [normed_field 𝕜] [normed_field 𝕜'] [normed_algebra 𝕜 𝕜']
-{E : Type*} [normed_group E] [normed_space 𝕜' E]
+variables (𝕜 : Type*) [normed_field 𝕜] (𝕜' : Type*) [normed_field 𝕜'] [normed_algebra 𝕜 𝕜']
+variables (E : Type*) [normed_group E] [normed_space 𝕜' E]
 
-/-- `𝕜`-normed space structure induced by a `𝕜'`-normed space structure when `𝕜'` is a
-normed algebra over `𝕜`. Not registered as an instance as `𝕜'` can not be inferred. -/
--- We could add a type synonym equipped with this as an instance,
--- as we've done for `module.restrict_scalars`.
-def normed_space.restrict_scalars : normed_space 𝕜 E :=
+/--
+When `E` is a normed space over a normed field `𝕜'`, and `𝕜'` is a normed algebra over `𝕜`, then `E`
+inherits a normed space structure over `𝕜`, called `normed_space.restrict_scalars' 𝕜 𝕜' E`.
+We do not register this as an instance as `𝕜'` can not be inferred.
+-/
+def normed_space.restrict_scalars' : normed_space 𝕜 E :=
 { norm_smul_le := λc x, le_of_eq $ begin
     change ∥(algebra_map 𝕜 𝕜' c) • x∥ = ∥c∥ * ∥x∥,
     simp [norm_smul]
   end,
   ..module.restrict_scalars' 𝕜 𝕜' E }
+
+/--
+When `E` is a normed space over a normed field `𝕜'`, and `𝕜'` is a normed algebra over `𝕜`, then `E`
+inherits a normed space structure over `𝕜`, provided as a type synonym
+`normed_space.restrict_scalars 𝕜 𝕜' E := E`.
+-/
+@[nolint unused_arguments]
+def normed_space.restrict_scalars (𝕜 : Type*) (𝕜' : Type*) (E : Type*) : Type* := E
+
+instance (𝕜 : Type*) (𝕜' : Type*) (E : Type*) [I : inhabited E] :
+  inhabited (normed_space.restrict_scalars 𝕜 𝕜' E) := I
+
+instance (𝕜 : Type*) (𝕜' : Type*) (E : Type*) [I : normed_group E] :
+  normed_group (normed_space.restrict_scalars 𝕜 𝕜' E) := I
+
+instance : normed_space 𝕜 (normed_space.restrict_scalars 𝕜 𝕜' E) :=
+(normed_space.restrict_scalars' 𝕜 𝕜' E : normed_space 𝕜 E)
 
 end restrict_scalars
 

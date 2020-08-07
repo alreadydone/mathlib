@@ -2434,7 +2434,7 @@ variables (𝕜 : Type*) [nondiscrete_normed_field 𝕜]
 {F : Type*} [normed_group F] [normed_space 𝕜' F]
 {f : E → F} {f' : E →L[𝕜'] F} {s : set E} {x : E}
 
-local attribute [instance] normed_space.restrict_scalars
+local attribute [instance] normed_space.restrict_scalars'
 
 lemma has_strict_fderiv_at.restrict_scalars (h : has_strict_fderiv_at f f' x) :
   has_strict_fderiv_at f (f'.restrict_scalars 𝕜) x := h
