@@ -543,7 +543,7 @@ lemma translation_number_le_of_le_add_nat {x : ℝ} {m : ℕ} (h : f x ≤ x + m
 
 lemma le_translation_number_of_add_int_le {x : ℝ} {m : ℤ} (h : x + m ≤ f x) : ↑m ≤ τ f :=
 ge_of_tendsto' (f.tendsto_translation_number' x) $ λ n,
-le_div_of_mul_le n.cast_add_one_pos $ le_sub_iff_add_le'.2 $
+(le_div_iff n.cast_add_one_pos).mpr $ le_sub_iff_add_le'.2 $
 by simp only [coe_pow, mul_comm (m:ℝ), ← nat.cast_add_one, f.le_iterate_of_add_int_le_map h]
 
 lemma le_translation_number_of_add_nat_le {x : ℝ} {m : ℕ} (h : x + m ≤ f x) : ↑m ≤ τ f :=

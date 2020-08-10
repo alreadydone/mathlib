@@ -367,9 +367,8 @@ tendsto_nhds_unique newton_seq_dist_tendsto' newton_seq_dist_tendsto
 
 private lemma soln_dist_to_a_lt_deriv : ∥soln - a∥ < ∥F.derivative.eval a∥ :=
 begin
-  rw soln_dist_to_a,
-  apply div_lt_of_pos_of_lt_mul,
-  { apply deriv_norm_pos; assumption },
+  rw [soln_dist_to_a, div_lt_iff],
+  { apply norm_nonneg },
   { rwa _root_.pow_two at hnorm }
 end
 

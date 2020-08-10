@@ -10,7 +10,7 @@ namespace real
 lemma pi_gt_sqrt_two_add_series (n : ℕ) : 2 ^ (n+1) * sqrt (2 - sqrt_two_add_series 0 n) < pi :=
 begin
   have : sqrt (2 - sqrt_two_add_series 0 n) / 2 * 2 ^ (n+2) < pi,
-  { apply mul_lt_of_lt_div, apply pow_pos, norm_num,
+  { rw [← lt_div_iff], apply pow_pos, norm_num,
     rw [←sin_pi_over_two_pow_succ], apply sin_lt, apply div_pos pi_pos, apply pow_pos, norm_num },
   apply lt_of_le_of_lt (le_of_eq _) this,
   rw [pow_succ _ (n+1), ←mul_assoc, div_mul_cancel, mul_comm], norm_num
@@ -27,12 +27,12 @@ begin
       simp only [show ((4 : ℝ) = 2 ^ 2), by norm_num, mul_one],
       apply pow_le_pow, norm_num, apply le_add_of_nonneg_left, apply nat.zero_le },
     apply add_le_add_left, rw div_le_div_right,
-    apply le_div_of_mul_le, apply pow_pos, apply pow_pos, norm_num,
+    rw le_div_iff, apply pow_pos, apply pow_pos, norm_num,
     rw [←mul_pow],
     refine le_trans _ (le_of_eq (one_pow 3)), apply pow_le_pow_of_le_left,
     { apply le_of_lt, apply mul_pos, apply div_pos pi_pos, apply pow_pos, norm_num, apply pow_pos,
       norm_num },
-    apply mul_le_of_le_div, apply pow_pos, norm_num,
+    rw ← le_div_iff, apply pow_pos, norm_num,
     refine le_trans ((div_le_div_right _).mpr pi_le_four) _, apply pow_pos, norm_num,
     rw [pow_succ, pow_succ, ←mul_assoc, ←div_div_eq_div_mul],
     convert le_refl _, norm_num, norm_num,

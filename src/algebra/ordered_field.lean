@@ -223,9 +223,6 @@ begin
   exact mul_le_mul_of_nonneg_left ((inv_le_inv (lt_of_lt_of_le hc h) hc).mpr h) ha
 end
 
-lemma div_lt_div_of_lt_left (hb : 0 < b) (h : b < a) (hc : 0 < c) : c / a < c / b :=
-(div_lt_div_left hc (lt_trans hb h) hb).mpr h
-
 lemma div_le_div_of_le_of_nonneg (hab : a ≤ b) (hc : 0 ≤ c) : a / c ≤ b / c :=
 mul_le_mul_of_nonneg_right hab (inv_nonneg.2 hc)
 
@@ -282,6 +279,9 @@ lemma div_lt_div (hac : a < c) (hbd : d ≤ b) (c0 : 0 ≤ c) (d0 : 0 < d) :
 lemma div_lt_div' (hac : a ≤ c) (hbd : d < b) (c0 : 0 < c) (d0 : 0 < d) :
   a / b < c / d :=
 (div_lt_div_iff (lt_trans d0 hbd) d0).2 (mul_lt_mul' hac hbd (le_of_lt d0) c0)
+
+lemma div_lt_div_of_lt_left (hb : 0 < b) (h : b < a) (hc : 0 < c) : c / a < c / b :=
+(div_lt_div_left hc (lt_trans hb h) hb).mpr h
 
 /-!
 ### Relating one division and involving `1`

@@ -91,7 +91,7 @@ have (log x * (↑n)⁻¹).im = (log x).im / n,
 have h : -π < (log x * (↑n)⁻¹).im ∧ (log x * (↑n)⁻¹).im ≤ π,
   from (le_total (log x).im 0).elim
     (λ h, ⟨calc -π < (log x).im : by simp [log, neg_pi_lt_arg]
-            ... ≤ ((log x).im * 1) / n : le_div_of_mul_le (nat.cast_pos.2 hn)
+            ... ≤ ((log x).im * 1) / n : (le_div_iff (nat.cast_pos.2 hn)).mpr
               (mul_le_mul_of_nonpos_left (by rw ← nat.cast_one; exact nat.cast_le.2 hn) h)
             ... = (log x * (↑n)⁻¹).im : by simp [this],
           this.symm ▸ le_trans (div_nonpos_of_nonpos_of_nonneg h n.cast_nonneg)
