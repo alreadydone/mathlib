@@ -99,7 +99,7 @@ have h : -π < (log x * (↑n)⁻¹).im ∧ (log x * (↑n)⁻¹).im ≤ π,
     (λ h, ⟨this.symm ▸ lt_of_lt_of_le (neg_neg_of_pos real.pi_pos)
             (div_nonneg h n.cast_nonneg),
           calc (log x * (↑n)⁻¹).im = (1 * (log x).im) / n : by simp [this]
-            ... ≤ (log x).im : (div_le_iff (nat.cast_pos.2 hn)).mpr
+            ... ≤ (log x).im : (div_le_iff' (nat.cast_pos.2 hn)).mpr
               (mul_le_mul_of_nonneg_right (by rw ← nat.cast_one; exact nat.cast_le.2 hn) h)
             ... ≤ _ : by simp [log, arg_le_pi]⟩),
 by rw [← cpow_nat_cast, ← cpow_mul _ h.1 h.2,
