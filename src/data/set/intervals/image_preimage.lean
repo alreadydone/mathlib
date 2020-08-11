@@ -288,7 +288,7 @@ begin
       mul_le_mul_of_nonneg_right hx.2 (le_of_lt h)⟩ },
   { intro hx,
     refine ⟨x / c, _, div_mul_cancel x (ne_of_gt h)⟩,
-    exact ⟨(le_div_iff h).mpr hx.1, div_le_of_le_mul h (mul_comm b c ▸ hx.2)⟩ }
+    exact ⟨(le_div_iff h).mpr hx.1, (div_le_iff h).mpr hx.2⟩ }
 end
 
 lemma image_mul_right_Icc {a b c : k} (hab : a ≤ b) (hc : 0 ≤ c) :

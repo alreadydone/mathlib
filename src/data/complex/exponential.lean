@@ -1129,7 +1129,7 @@ calc 0 < x - x ^ 3 / 6 - abs' x ^ 4 * (5 / 96) :
     (by rwa [_root_.abs_of_nonneg (le_of_lt hx0)]))).2
 
 lemma sin_pos_of_pos_of_le_two {x : ℝ} (hx0 : 0 < x) (hx : x ≤ 2) : 0 < sin x :=
-have x / 2 ≤ 1, from div_le_of_le_mul (by norm_num) (by simpa),
+have x / 2 ≤ 1, from (div_le_iff (by norm_num)).mpr (by simpa),
 calc 0 < 2 * sin (x / 2) * cos (x / 2) :
   mul_pos (mul_pos (by norm_num) (sin_pos_of_pos_of_le_one (half_pos hx0) this))
     (cos_pos_of_le_one (by rwa [_root_.abs_of_nonneg (le_of_lt (half_pos hx0))]))

@@ -23,7 +23,7 @@ begin
   { rw [←div_lt_iff, ←sin_pi_over_two_pow_succ],
     refine lt_of_lt_of_le (lt_add_of_sub_right_lt (sin_gt_sub_cube _ _)) _,
     { apply div_pos pi_pos, apply pow_pos, norm_num },
-    { apply div_le_of_le_mul, apply pow_pos, norm_num, refine le_trans pi_le_four _,
+    { rw div_le_iff, apply pow_pos, norm_num, refine le_trans pi_le_four _,
       simp only [show ((4 : ℝ) = 2 ^ 2), by norm_num, mul_one],
       apply pow_le_pow, norm_num, apply le_add_of_nonneg_left, apply nat.zero_le },
     apply add_le_add_left, rw div_le_div_right,
@@ -52,7 +52,7 @@ theorem pi_lower_bound_start (n : ℕ) {a}
   (h : sqrt_two_add_series ((0:ℕ) / (1:ℕ)) n ≤ 2 - (a / 2 ^ (n + 1)) ^ 2) : a < pi :=
 begin
   refine lt_of_le_of_lt _ (pi_gt_sqrt_two_add_series n), rw [mul_comm],
-  refine le_mul_of_div_le (pow_pos (by norm_num) _) (le_sqrt_of_sqr_le _),
+  refine (div_le_iff (pow_pos (by norm_num) _)).mp (le_sqrt_of_sqr_le _),
   rwa [le_sub, show (0:ℝ) = (0:ℕ)/(1:ℕ), by rw [nat.cast_zero, zero_div]],
 end
 
