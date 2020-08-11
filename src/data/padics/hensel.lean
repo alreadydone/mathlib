@@ -111,7 +111,7 @@ calc T = ∥F.eval a∥ / ∥((F.derivative.eval a)^2 : ℚ_[p])∥ : normed_fie
    ... = ∥F.eval a∥ / ∥(F.derivative.eval a)∥^2 : by simp [pow, monoid.pow]
 
 private lemma T_lt_one : T < 1 :=
-let h := (div_lt_one_iff_lt deriv_sq_norm_pos).2 hnorm in
+let h := (div_lt_one deriv_sq_norm_pos).2 hnorm in
 by rw T_def; apply h
 
 private lemma T_pow {n : ℕ} (hn : n > 0) : T ^ n < 1 :=
