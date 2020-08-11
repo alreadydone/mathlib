@@ -535,7 +535,7 @@ translation_number_translate z ▸ translation_number_mono
 
 lemma translation_number_le_of_le_add_int {x : ℝ} {m : ℤ} (h : f x ≤ x + m) : τ f ≤ m :=
 le_of_tendsto' (f.tendsto_translation_number' x) $ λ n,
-(div_le_iff n.cast_add_one_pos).mpr $ sub_le_iff_le_add'.2 $
+(div_le_iff' n.cast_add_one_pos).mpr $ sub_le_iff_le_add'.2 $
 (coe_pow f (n + 1)).symm ▸ f.iterate_le_of_map_le_add_int h (n + 1)
 
 lemma translation_number_le_of_le_add_nat {x : ℝ} {m : ℕ} (h : f x ≤ x + m) : τ f ≤ m :=

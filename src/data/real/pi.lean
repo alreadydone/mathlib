@@ -20,10 +20,10 @@ lemma pi_lt_sqrt_two_add_series (n : ℕ) :
   pi < 2 ^ (n+1) * sqrt (2 - sqrt_two_add_series 0 n) + 1 / 4 ^ n :=
 begin
   have : pi < (sqrt (2 - sqrt_two_add_series 0 n) / 2 + 1 / (2 ^ n) ^ 3 / 4) * 2 ^ (n+2),
-  { rw [←div_lt_iff, ←sin_pi_over_two_pow_succ],
+  { rw [← div_lt_iff, ← sin_pi_over_two_pow_succ],
     refine lt_of_lt_of_le (lt_add_of_sub_right_lt (sin_gt_sub_cube _ _)) _,
     { apply div_pos pi_pos, apply pow_pos, norm_num },
-    { rw div_le_iff, apply pow_pos, norm_num, refine le_trans pi_le_four _,
+    { rw div_le_iff', apply pow_pos, norm_num, refine le_trans pi_le_four _,
       simp only [show ((4 : ℝ) = 2 ^ 2), by norm_num, mul_one],
       apply pow_le_pow, norm_num, apply le_add_of_nonneg_left, apply nat.zero_le },
     apply add_le_add_left, rw div_le_div_right,
