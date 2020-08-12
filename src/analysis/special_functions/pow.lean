@@ -91,7 +91,7 @@ have (log x * (↑n)⁻¹).im = (log x).im / n,
 have h : -π < (log x * (↑n)⁻¹).im ∧ (log x * (↑n)⁻¹).im ≤ π,
   from (le_total (log x).im 0).elim
     (λ h, ⟨calc -π < (log x).im : by simp [log, neg_pi_lt_arg]
-            ... ≤ ((log x).im * 1) / n : (le_div_iff (nat.cast_pos.2 hn)).mpr
+            ... ≤ ((log x).im * 1) / n : (le_div_iff (nat.cast_pos.2 hn : (0 : ℝ) < _)).mpr
               (mul_le_mul_of_nonpos_left (by rw ← nat.cast_one; exact nat.cast_le.2 hn) h)
             ... = (log x * (↑n)⁻¹).im : by simp [this],
           this.symm ▸ le_trans (div_nonpos_of_nonpos_of_nonneg h n.cast_nonneg)
@@ -99,7 +99,7 @@ have h : -π < (log x * (↑n)⁻¹).im ∧ (log x * (↑n)⁻¹).im ≤ π,
     (λ h, ⟨this.symm ▸ lt_of_lt_of_le (neg_neg_of_pos real.pi_pos)
             (div_nonneg h n.cast_nonneg),
           calc (log x * (↑n)⁻¹).im = (1 * (log x).im) / n : by simp [this]
-            ... ≤ (log x).im : (div_le_iff' (nat.cast_pos.2 hn)).mpr
+            ... ≤ (log x).im : (div_le_iff' (nat.cast_pos.2 hn : (0 : ℝ) < _)).mpr
               (mul_le_mul_of_nonneg_right (by rw ← nat.cast_one; exact nat.cast_le.2 hn) h)
             ... ≤ _ : by simp [log, arg_le_pi]⟩),
 by rw [← cpow_nat_cast, ← cpow_mul _ h.1 h.2,
