@@ -10,8 +10,8 @@ namespace real
 lemma pi_gt_sqrt_two_add_series (n : ℕ) : 2 ^ (n+1) * sqrt (2 - sqrt_two_add_series 0 n) < pi :=
 begin
   have : sqrt (2 - sqrt_two_add_series 0 n) / 2 * 2 ^ (n+2) < pi,
-  { rw [← lt_div_iff], apply pow_pos, norm_num,
-    rw [←sin_pi_over_two_pow_succ], apply sin_lt, apply div_pos pi_pos, apply pow_pos, norm_num },
+  { rw [← lt_div_iff, ←sin_pi_over_two_pow_succ], apply sin_lt, apply div_pos pi_pos,
+    all_goals { apply pow_pos, norm_num } },
   apply lt_of_le_of_lt (le_of_eq _) this,
   rw [pow_succ _ (n+1), ←mul_assoc, div_mul_cancel, mul_comm], norm_num
 end
@@ -53,7 +53,7 @@ theorem pi_lower_bound_start (n : ℕ) {a}
   (h : sqrt_two_add_series ((0:ℕ) / (1:ℕ)) n ≤ 2 - (a / 2 ^ (n + 1)) ^ 2) : a < pi :=
 begin
   refine lt_of_le_of_lt _ (pi_gt_sqrt_two_add_series n), rw [mul_comm],
-  refine (div_le_iff (pow_pos (by norm_num) _)).mp (le_sqrt_of_sqr_le _),
+  refine (div_le_iff (pow_pos (by norm_num) _ : (_ : ℝ) < _)).mp (le_sqrt_of_sqr_le _),
   rwa [le_sub, show (0:ℝ) = (0:ℕ)/(1:ℕ), by rw [nat.cast_zero, zero_div]],
 end
 
