@@ -1,15 +1,15 @@
 /-
 Copyright (c) 2014 Robert Lewis. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Robert Lewis, Leonardo de Moura, Mario Carneiro
+Authors: Robert Lewis, Leonardo de Moura, Mario Carneiro, Floris van Doorn
 -/
 import algebra.ordered_ring
 import algebra.field
 /-!
   ### Linear ordered fields
   A linear ordered field is a field equipped with a linear order such that
-  * addition respects the order: `a 竕､ b 竊 c + a 竕､ c + b`;
-  * multiplication of positives is positive: `0 < a 竊 0 < b 竊 0 < a * b`;
+  * addition respects the order: `a ≤ b → c + a ≤ c + b`;
+  * multiplication of positives is positive: `0 < a → 0 < b → 0 < a * b`;
   * `0 < 1`.
 
   ### Main Definitions
@@ -88,23 +88,23 @@ mul_nonpos_of_nonneg_of_nonpos ha (inv_nonpos.2 hb)
 -/
 
 lemma le_div_iff (hc : 0 < c) : a ≤ b / c ↔ a * c ≤ b :=
-⟨λ h, div_mul_cancel b (ne.symm (ne_of_lt hc)) ▸ mul_le_mul_of_nonneg_right h (le_of_lt hc),
+⟨λ h, div_mul_cancel b (ne_of_lt hc).symm ▸ mul_le_mul_of_nonneg_right h (le_of_lt hc),
   λ h, calc
-    a   = a * c * (1 / c) : mul_mul_div a (ne.symm (ne_of_lt hc))
+    a   = a * c * (1 / c) : mul_mul_div a (ne_of_lt hc).symm
     ... ≤ b * (1 / c)     : mul_le_mul_of_nonneg_right h (le_of_lt (one_div_pos.2 hc))
-    ... = b / c           : eq.symm $ div_eq_mul_one_div b c⟩
+    ... = b / c           : (div_eq_mul_one_div b c).symm⟩
 
 lemma le_div_iff' (hc : 0 < c) : a ≤ b / c ↔ c * a ≤ b :=
 by rw [mul_comm, le_div_iff hc]
 
 lemma div_le_iff (hb : 0 < b) : a / b ≤ c ↔ a ≤ c * b :=
 ⟨λ h, calc
-  a = a / b * b : by rw (div_mul_cancel _ (ne.symm (ne_of_lt hb)))
+  a = a / b * b : by rw (div_mul_cancel _ (ne_of_lt hb).symm)
   ... ≤ c * b     : mul_le_mul_of_nonneg_right h (le_of_lt hb),
   λ h, calc
   a / b = a * (1 / b)     : div_eq_mul_one_div a b
   ... ≤ (c * b) * (1 / b) : mul_le_mul_of_nonneg_right h $ le_of_lt $ one_div_pos.2 hb
-  ... = (c * b) / b       : eq.symm $ div_eq_mul_one_div (c * b) b
+  ... = (c * b) / b       : (div_eq_mul_one_div (c * b) b).symm
   ... = c                 : by refine (div_eq_iff (ne_of_gt hb)).mpr rfl⟩
 
 lemma div_le_iff' (hb : 0 < b) : a / b ≤ c ↔ a ≤ b * c :=
@@ -127,7 +127,7 @@ lemma div_le_iff_of_neg (hc : c < 0) : b / c ≤ a ↔ a * c ≤ b :=
   λ h, calc
     a = a * c * (1 / c) : mul_mul_div a (ne_of_lt hc)
   ... ≥ b * (1 / c)     : mul_le_mul_of_nonpos_right h (le_of_lt (one_div_neg.2 hc))
-  ... = b / c           : eq.symm $ div_eq_mul_one_div b c⟩
+  ... = b / c           : (div_eq_mul_one_div b c).symm⟩
 
 lemma div_le_iff_of_neg' (hc : c < 0) : b / c ≤ a ↔ c * a ≤ b :=
 by rw [mul_comm, div_le_iff_of_neg hc]
